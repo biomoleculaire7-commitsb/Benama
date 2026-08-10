@@ -5,14 +5,40 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(BASE_DIR, "data", "school_data.json")
-DOCS_FILE = os.path.join(BASE_DIR, "data", "documents.json")
+
+# Search several likely locations for the data file, since manual GitHub
+# uploads sometimes drop files at repo root instead of inside data/.
+_CANDIDATE_PATHS = [
+    os.path.join(BASE_DIR, "data", "school_data.json"),
+    os.path.join(BASE_DIR, "school_data.json"),
+    os.path.join(BASE_DIR, "..", "school_data.json"),
+    os.path.join(BASE_DIR, "..", "data", "school_data.json"),
+]
+DATA_FILE = next((p for p in _CANDIDATE_PATHS if os.path.exists(p)), None)
+if DATA_FILE is None:
+    raise FileNotFoundError(
+        "تعذّر إيجاد school_data.json. تأكد من رفعه إلى المستودع "
+        "(داخل مجلد data/ أو في الجذر مباشرة). تم البحث في: "
+        + ", ".join(_CANDIDATE_PATHS)
+    )
+
+DOCS_FILE = os.path.join(os.path.dirname(DATA_FILE), "documents.json")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB - real server, no artifact-storage limit
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-app = Flask(__name__)
+# Same resilience as the data file: find templates/ wherever it actually landed.
+_TEMPLATE_CANDIDATES = [
+    os.path.join(BASE_DIR, "templates"),
+    BASE_DIR,
+]
+TEMPLATE_DIR = next(
+    (p for p in _TEMPLATE_CANDIDATES if os.path.exists(os.path.join(p, "index.html"))),
+    os.path.join(BASE_DIR, "templates"),
+)
+
+app = Flask(__name__, template_folder=TEMPLATE_DIR)
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 
 with open(DATA_FILE, encoding="utf-8") as f:
@@ -91,10 +117,15 @@ def export_roster_csv(class_name):
         lines.append(f'{i},{s["last_name"]},{s["first_name"]},{s["gender"]},{s["national_id"]},{s["class"]}')
     csv_content = "\ufeff" + "\n".join(lines)
     from flask import Response
+    from urllib.parse import quote
+    filename = f"قائمة_قسم_{class_name}.csv"
+    encoded_filename = quote(filename)
     return Response(
         csv_content,
         mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=قائمة_قسم_{class_name}.csv"}
+        headers={
+            "Content-Disposition": f"attachment; filename=roster.csv; filename*=UTF-8''{encoded_filename}"
+        }
     )
 
 
