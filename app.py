@@ -109,7 +109,7 @@ def roster(class_name):
     return jsonify({"class": class_name, "count": len(rows), "students": rows})
 
 
-@app.route("/api/roster/<class_name>/export.xlsx")
+@app.route("/api/roster/<class_name>/export.csv")
 def export_roster_csv(class_name):
     rows = [s for s in STUDENTS if s["class"] == class_name]
 
@@ -172,9 +172,7 @@ def export_roster_csv(class_name):
         buf.read(),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition": f"attachment; filename=roster.xlsx; filename*=UTF-8''{encoded_filename}",
-            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-            "Pragma": "no-cache",
+            "Content-Disposition": f"attachment; filename=roster.xlsx; filename*=UTF-8''{encoded_filename}"
         }
     )
 
