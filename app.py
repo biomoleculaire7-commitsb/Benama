@@ -109,22 +109,72 @@ def roster(class_name):
     return jsonify({"class": class_name, "count": len(rows), "students": rows})
 
 
-@app.route("/api/roster/<class_name>/export.csv")
+@app.route("/api/roster/<class_name>/export.xlsx")
 def export_roster_csv(class_name):
     rows = [s for s in STUDENTS if s["class"] == class_name]
-    lines = ["الرقم,اللقب,الاسم,الجنس,الرقم التعريف الوطني,القسم"]
-    for i, s in enumerate(rows, 1):
-        lines.append(f'{i},{s["last_name"]},{s["first_name"]},{s["gender"]},{s["national_id"]},{s["class"]}')
-    csv_content = "\ufeff" + "\n".join(lines)
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
     from flask import Response
     from urllib.parse import quote
-    filename = f"قائمة_قسم_{class_name}.csv"
+    import io
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = class_name
+    ws.sheet_view.rightToLeft = True
+
+    GREEN = "0F4C3A"
+    OCHRE = "C17817"
+    thin = Side(style="thin", color="D8CFB8")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    ncols = 5
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
+    ws["A1"] = f"متوسطة الشهيد بن نعمة مصطفى — قائمة تلاميذ قسم {class_name}"
+    ws["A1"].font = Font(name="Arial", size=13, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor=GREEN)
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 26
+
+    headers = ["الرقم", "اللقب", "الاسم", "الجنس", "الرقم التعريف الوطني"]
+    for i, h in enumerate(headers, start=1):
+        c = ws.cell(row=3, column=i, value=h)
+        c.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+        c.fill = PatternFill("solid", fgColor=OCHRE)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border = border
+
+    for idx, s in enumerate(rows, start=1):
+        r = idx + 3
+        values = [idx, s["last_name"], s["first_name"], s["gender"], s["national_id"]]
+        for c_i, val in enumerate(values, start=1):
+            cell = ws.cell(row=r, column=c_i, value=val)
+            cell.font = Font(name="Arial", size=10.5)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
+            if r % 2 == 0:
+                cell.fill = PatternFill("solid", fgColor="FBFAF6")
+
+    widths = [7, 20, 20, 8, 20]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.freeze_panes = "A4"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"قائمة_قسم_{class_name}.xlsx"
     encoded_filename = quote(filename)
     return Response(
-        csv_content,
-        mimetype="text/csv",
+        buf.read(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition": f"attachment; filename=roster.csv; filename*=UTF-8''{encoded_filename}"
+            "Content-Disposition": f"attachment; filename=roster.xlsx; filename*=UTF-8''{encoded_filename}",
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
         }
     )
 
