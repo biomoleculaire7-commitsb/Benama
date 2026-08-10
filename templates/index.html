@@ -249,7 +249,7 @@ async function onClassChange(){
     ${roster.slice(0,6).map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.gender}</td></tr>`).join('')}
     </table>
     ${roster.length>6 ? `<div class="hint">+ ${roster.length-6} تلميذاً آخر...</div>` : ''}`;
-  dlDiv.innerHTML = `<a class="btn" style="display:inline-block;margin-top:12px;background:var(--green);text-decoration:none" href="/api/roster/${encodeURIComponent(cls)}/export.xlsx">⬇ تحميل قائمة القسم الكاملة (Excel)</a>`;
+  dlDiv.innerHTML = `<a class="btn" style="display:inline-block;margin-top:12px;background:var(--green);text-decoration:none" href="/api/roster/${encodeURIComponent(cls)}/export.csv">⬇ تحميل قائمة القسم الكاملة (Excel)</a>`;
 }
 
 async function sendDoc(){
