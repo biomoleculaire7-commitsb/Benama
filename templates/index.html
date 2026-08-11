@@ -73,6 +73,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
     <div class="switcher">
       <button class="active" id="btnLoginStudent" onclick="setLoginTab('student')">🎒 تلميذ</button>
       <button id="btnLoginTeacher" onclick="setLoginTab('teacher')">👨‍🏫 أستاذ</button>
+      <button id="btnLoginAdmin" onclick="setLoginTab('admin')">🏛️ إدارة</button>
     </div>
     <div class="card">
       <div id="loginStudentForm">
@@ -93,6 +94,15 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <button class="btn" onclick="loginTeacher()">دخول فضائي</button>
         <div id="loginTeacherError" class="login-error"></div>
       </div>
+      <div id="loginAdminForm" style="display:none">
+        <h3>دخول الإدارة (مدير / ناظر / مستشار توجيه)</h3>
+        <div class="field">
+          <label>الرقم التعريف الوظيفي</label>
+          <input type="text" id="loginAdminId" placeholder="أدخل رقمك الوظيفي الكامل" inputmode="numeric">
+        </div>
+        <button class="btn" onclick="loginAdmin()">دخول فضائي</button>
+        <div id="loginAdminError" class="login-error"></div>
+      </div>
     </div>
   </div>
 
@@ -109,9 +119,8 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       </div>
 
       <div class="card">
-        <h3>📢 إعلانات الإدارة (نموذج)</h3>
-        <div class="announcement">اجتماع تربوي لأساتذة المستوى الرابع متوسط يوم الخميس الساعة 13:00.<div class="dmeta">إدارة المؤسسة</div></div>
-        <div class="hint">قسم نموذجي بانتظار ربطه بإعلانات حقيقية.</div>
+        <h3>📢 إعلانات الإدارة</h3>
+        <div id="teacherAnnList"><div class="empty">جارٍ التحميل...</div></div>
       </div>
 
       <div class="card" id="sendCard" style="display:none">
@@ -142,8 +151,84 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <div id="studentDocs"><div class="empty">جارٍ التحميل...</div></div>
       </div>
       <div class="card" id="stPanelAnn" style="display:none">
-        <h3>📢 آخر الإعلانات (نموذج)</h3>
-        <div class="announcement">إعلان استئناف الدراسة للموسم 2026/2027 — قريباً.<div class="dmeta">إدارة المؤسسة</div></div>
+        <h3>📢 آخر الإعلانات</h3>
+        <div id="studentAnnList"><div class="empty">جارٍ التحميل...</div></div>
+      </div>
+    </div>
+
+    <!-- ADMIN: director -->
+    <div id="directorMode" style="display:none">
+      <div class="card">
+        <h3>📊 التقرير اليومي</h3>
+        <div class="field" style="max-width:220px">
+          <label>التاريخ</label>
+          <input type="date" id="reportDate" onchange="loadDailyReport()">
+        </div>
+      </div>
+      <div class="card">
+        <h3>🔑 من دخل المنصة اليوم</h3>
+        <div id="loginsSummary"></div>
+      </div>
+      <div class="card">
+        <h3>🚫 التلاميذ الغائبون اليوم</h3>
+        <div id="absencesReport"></div>
+      </div>
+      <div class="card">
+        <h3>📎 الوثائق المُرسلة اليوم</h3>
+        <div id="docsReport"></div>
+      </div>
+      <div class="card">
+        <h3>🧭 مقابلات التوجيه اليوم</h3>
+        <div id="guidanceReport"></div>
+      </div>
+      <div class="card">
+        <h3>📢 نشر إعلان جديد</h3>
+        <div class="field"><label>عنوان الإعلان</label><input type="text" id="annTitle"></div>
+        <div class="field"><label>نص الإعلان</label><textarea id="annBody"></textarea></div>
+        <div class="field">
+          <label>الجهة المستهدفة</label>
+          <select id="annTarget">
+            <option value="all">الجميع (تلاميذ + أساتذة)</option>
+            <option value="students">التلاميذ فقط</option>
+            <option value="teachers">الأساتذة فقط</option>
+          </select>
+        </div>
+        <button class="btn" onclick="createAnnouncement()">نشر الإعلان</button>
+      </div>
+    </div>
+
+    <!-- ADMIN: supervisor (الناظر) -->
+    <div id="supervisorMode" style="display:none">
+      <div class="card">
+        <h3>تسجيل الغياب اليومي</h3>
+        <div class="field">
+          <label>القسم</label>
+          <select id="supClassSelect" onchange="loadSupervisorRoster()"></select>
+        </div>
+        <div class="field">
+          <label>التاريخ</label>
+          <input type="date" id="supDate" onchange="loadSupervisorRoster()">
+        </div>
+        <div id="supRosterList"></div>
+        <button class="btn" onclick="submitAbsences()" style="margin-top:14px">💾 حفظ الغياب</button>
+      </div>
+    </div>
+
+    <!-- ADMIN: counselor (مستشار التوجيه) -->
+    <div id="counselorMode" style="display:none">
+      <div class="card">
+        <h3>متابعة التوجيه</h3>
+        <div class="field">
+          <label>القسم</label>
+          <select id="counClassSelect" onchange="loadCounselorRoster()"></select>
+        </div>
+        <div id="counRosterList"></div>
+      </div>
+      <div class="card" id="counStudentCard" style="display:none">
+        <h3 id="counStudentTitle"></h3>
+        <div class="field"><label>مقابلة / ملاحظة جديدة</label><textarea id="counNote"></textarea></div>
+        <button class="btn" onclick="addGuidanceNote()">حفظ المقابلة</button>
+        <div id="counHistory" style="margin-top:16px"></div>
       </div>
     </div>
   </div>
@@ -156,8 +241,10 @@ let currentUser = null;
 function setLoginTab(tab){
   document.getElementById('btnLoginStudent').classList.toggle('active', tab==='student');
   document.getElementById('btnLoginTeacher').classList.toggle('active', tab==='teacher');
+  document.getElementById('btnLoginAdmin').classList.toggle('active', tab==='admin');
   document.getElementById('loginStudentForm').style.display = tab==='student' ? 'block':'none';
   document.getElementById('loginTeacherForm').style.display = tab==='teacher' ? 'block':'none';
+  document.getElementById('loginAdminForm').style.display = tab==='admin' ? 'block':'none';
 }
 
 async function loginStudent(){
@@ -189,6 +276,18 @@ function logout(){
   document.getElementById('userBadgeWrap').style.display = 'none';
   document.getElementById('loginStudentId').value = '';
   document.getElementById('loginTeacherId').value = '';
+  document.getElementById('loginAdminId').value = '';
+}
+
+async function loginAdmin(){
+  const id = document.getElementById('loginAdminId').value.trim();
+  const errDiv = document.getElementById('loginAdminError');
+  errDiv.innerText = '';
+  const res = await fetch('/api/login/admin', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({employee_id:id})});
+  const data = await res.json();
+  if(!data.ok){ errDiv.innerText = '⚠️ ' + data.error; return; }
+  currentUser = data.user;
+  enterApp();
 }
 
 async function enterApp(){
@@ -196,17 +295,201 @@ async function enterApp(){
   document.getElementById('appScreen').style.display = 'block';
   document.getElementById('userBadgeWrap').style.display = 'flex';
   const badge = document.getElementById('roleBadge');
+
+  ['teacherMode','studentMode','directorMode','supervisorMode','counselorMode'].forEach(id=>{
+    document.getElementById(id).style.display = 'none';
+  });
+
   if(currentUser.role==='teacher'){
     badge.innerText = `أ. ${currentUser.last_name} ${currentUser.first_name} — ${currentUser.subject}`;
     document.getElementById('teacherMode').style.display = 'block';
-    document.getElementById('studentMode').style.display = 'none';
     await populateTeacherClasses();
-  } else {
+    loadAnnouncementsFor('teachers', 'teacherAnnList');
+  } else if(currentUser.role==='student'){
     badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${currentUser.class}`;
-    document.getElementById('teacherMode').style.display = 'none';
     document.getElementById('studentMode').style.display = 'block';
     document.getElementById('studentInfo').innerHTML = `<h3>مرحباً ${currentUser.first_name}</h3><div class="hint">القسم: <b>${currentUser.class}</b> — الجنس: ${currentUser.gender}</div>`;
     refreshStudentDocs();
+    loadAnnouncementsFor(currentUser.class, 'studentAnnList');
+  } else if(currentUser.role==='admin'){
+    const roleLabels = {director:'المدير', supervisor:'الناظر', counselor:'مستشار التوجيه'};
+    badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${roleLabels[currentUser.admin_role]}`;
+    if(currentUser.admin_role==='director'){
+      document.getElementById('directorMode').style.display = 'block';
+      document.getElementById('reportDate').value = new Date().toISOString().slice(0,10);
+      loadDailyReport();
+    } else if(currentUser.admin_role==='supervisor'){
+      document.getElementById('supervisorMode').style.display = 'block';
+      document.getElementById('supDate').value = new Date().toISOString().slice(0,10);
+      populateClassDropdown('supClassSelect', loadSupervisorRoster);
+    } else if(currentUser.admin_role==='counselor'){
+      document.getElementById('counselorMode').style.display = 'block';
+      populateClassDropdown('counClassSelect', loadCounselorRoster);
+    }
+  }
+}
+
+function populateClassDropdown(selectId, onReady){
+  const ALL_CLASSES = ['1م1','1م2','1م3','2م1','2م2','2م3','3م1','3م2','4م1','4م2','4م3'];
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '';
+  ALL_CLASSES.forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c; opt.innerText = c;
+    sel.appendChild(opt);
+  });
+  onReady();
+}
+
+// ---- Announcements ----
+async function loadAnnouncementsFor(audience, containerId){
+  const res = await fetch('/api/announcements/for/' + encodeURIComponent(audience));
+  const anns = await res.json();
+  const container = document.getElementById(containerId);
+  if(anns.length===0){
+    container.innerHTML = `<div class="empty">لا توجد إعلانات حالياً.</div>`;
+    return;
+  }
+  container.innerHTML = anns.map(a => `
+    <div class="announcement">
+      <b>${a.title}</b>
+      ${a.body ? `<div style="margin-top:4px">${a.body}</div>` : ''}
+      <div class="dmeta">${a.author} — ${a.date}</div>
+    </div>`).join('');
+}
+
+async function createAnnouncement(){
+  const title = document.getElementById('annTitle').value.trim();
+  const body = document.getElementById('annBody').value.trim();
+  const target = document.getElementById('annTarget').value;
+  if(!title){ showToast('⚠️ عنوان الإعلان مطلوب'); return; }
+  const res = await fetch('/api/announcements', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({title, body, target, author: `${currentUser.last_name} ${currentUser.first_name}`})
+  });
+  const data = await res.json();
+  if(data.ok){
+    showToast('✔ تم نشر الإعلان');
+    document.getElementById('annTitle').value='';
+    document.getElementById('annBody').value='';
+  } else {
+    showToast('⚠️ ' + (data.error||'تعذّر النشر'));
+  }
+}
+
+// ---- Director: daily report ----
+async function loadDailyReport(){
+  const date = document.getElementById('reportDate').value;
+  const res = await fetch('/api/director/daily-report?date=' + date);
+  const r = await res.json();
+
+  document.getElementById('loginsSummary').innerHTML = `
+    <div class="roster-badge">🎒 تلاميذ دخلوا: ${r.logins.students.length}</div>
+    <div class="roster-badge">👨‍🏫 أساتذة دخلوا: ${r.logins.teachers.length}</div>
+    <div class="roster-badge">🏛️ إدارة دخلت: ${r.logins.admins.length}</div>
+    <table><tr><th>الاسم</th><th>الصفة</th><th>الوقت</th></tr>
+    ${[...r.logins.students, ...r.logins.teachers, ...r.logins.admins].map(l=>`<tr><td>${l.name}</td><td>${l.role==='student'?'تلميذ':l.role==='teacher'?'أستاذ':'إدارة'}</td><td>${l.time}</td></tr>`).join('') || '<tr><td colspan="3">لا يوجد دخول مسجَّل</td></tr>'}
+    </table>`;
+
+  document.getElementById('absencesReport').innerHTML = r.absences.length ? `
+    <div class="roster-badge">🚫 العدد: ${r.absences.length}</div>
+    <table><tr><th>اللقب</th><th>الاسم</th><th>القسم</th></tr>
+    ${r.absences.map(a=>`<tr><td>${a.last_name}</td><td>${a.first_name}</td><td>${a.class}</td></tr>`).join('')}
+    </table>` : '<div class="empty">لا غياب مسجَّل لهذا اليوم.</div>';
+
+  document.getElementById('docsReport').innerHTML = r.documents_sent.length ? `
+    <table><tr><th>القسم</th><th>العنوان</th><th>النوع</th><th>الأستاذ</th></tr>
+    ${r.documents_sent.map(d=>`<tr><td>${d.class}</td><td>${d.title}</td><td>${d.doctype}</td><td>${d.teacher}</td></tr>`).join('')}
+    </table>` : '<div class="empty">لا وثائق مُرسلة لهذا اليوم.</div>';
+
+  document.getElementById('guidanceReport').innerHTML = r.guidance_interviews.length ? `
+    <table><tr><th>التلميذ</th><th>القسم</th><th>الملاحظة</th><th>المستشار</th></tr>
+    ${r.guidance_interviews.map(g=>`<tr><td>${g.student_name}</td><td>${g.class}</td><td>${g.note}</td><td>${g.author}</td></tr>`).join('')}
+    </table>` : '<div class="empty">لا مقابلات توجيه لهذا اليوم.</div>';
+}
+
+// ---- Supervisor: absences ----
+async function loadSupervisorRoster(){
+  const cls = document.getElementById('supClassSelect').value;
+  const date = document.getElementById('supDate').value;
+  const [rosterRes, absRes] = await Promise.all([
+    fetch('/api/roster/' + encodeURIComponent(cls)),
+    fetch(`/api/absences?class=${encodeURIComponent(cls)}&date=${date}`)
+  ]);
+  const roster = (await rosterRes.json()).students;
+  const absentIds = new Set((await absRes.json()).map(a=>a.national_id));
+
+  const container = document.getElementById('supRosterList');
+  if(roster.length===0){
+    container.innerHTML = '<div class="empty">لا توجد قائمة تلاميذ لهذا القسم.</div>';
+    return;
+  }
+  container.innerHTML = `<table><tr><th>غائب؟</th><th>اللقب والاسم</th></tr>
+    ${roster.map(s=>`<tr><td><input type="checkbox" class="absCheck" value="${s.national_id}" ${absentIds.has(String(s.national_id))?'checked':''}></td><td>${s.last_name} ${s.first_name}</td></tr>`).join('')}
+    </table>`;
+}
+
+async function submitAbsences(){
+  const cls = document.getElementById('supClassSelect').value;
+  const date = document.getElementById('supDate').value;
+  const ids = [...document.querySelectorAll('.absCheck:checked')].map(cb=>cb.value);
+  const res = await fetch('/api/absences', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({class: cls, date, national_ids: ids})
+  });
+  const data = await res.json();
+  if(data.ok) showToast(`✔ تم حفظ الغياب (${data.count} تلميذاً غائباً)`);
+  else showToast('⚠️ تعذّر الحفظ');
+}
+
+// ---- Counselor: guidance ----
+async function loadCounselorRoster(){
+  const cls = document.getElementById('counClassSelect').value;
+  const res = await fetch('/api/roster/' + encodeURIComponent(cls));
+  const data = await res.json();
+  const container = document.getElementById('counRosterList');
+  document.getElementById('counStudentCard').style.display = 'none';
+  if(data.count===0){
+    container.innerHTML = '<div class="empty">لا توجد قائمة تلاميذ لهذا القسم.</div>';
+    return;
+  }
+  container.innerHTML = `<table><tr><th>اللقب والاسم</th><th></th></tr>
+    ${data.students.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td><button class="small-btn" onclick='openCounselorStudent(${JSON.stringify(s)})'>فتح الملف</button></td></tr>`).join('')}
+    </table>`;
+}
+
+let counselorCurrentStudent = null;
+async function openCounselorStudent(stu){
+  counselorCurrentStudent = stu;
+  document.getElementById('counStudentCard').style.display = 'block';
+  document.getElementById('counStudentTitle').innerText = `ملف التوجيه: ${stu.last_name} ${stu.first_name} (${stu.class})`;
+  document.getElementById('counNote').value = '';
+  await refreshCounselorHistory();
+}
+
+async function refreshCounselorHistory(){
+  const res = await fetch('/api/guidance/' + counselorCurrentStudent.national_id);
+  const notes = await res.json();
+  const container = document.getElementById('counHistory');
+  container.innerHTML = notes.length ? `<h3 style="font-size:14px">سجل المقابلات السابقة</h3>` + notes.map(n=>`
+    <div class="announcement">${n.note}<div class="dmeta">${n.author} — ${n.date}</div></div>
+  `).join('') : '<div class="hint">لا مقابلات سابقة مسجَّلة.</div>';
+}
+
+async function addGuidanceNote(){
+  const note = document.getElementById('counNote').value.trim();
+  if(!note){ showToast('⚠️ يرجى كتابة نص المقابلة'); return; }
+  const res = await fetch('/api/guidance/' + counselorCurrentStudent.national_id, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({note, author: `${currentUser.last_name} ${currentUser.first_name}`})
+  });
+  const data = await res.json();
+  if(data.ok){
+    showToast('✔ تم حفظ المقابلة');
+    document.getElementById('counNote').value = '';
+    await refreshCounselorHistory();
+  } else {
+    showToast('⚠️ تعذّر الحفظ');
   }
 }
 
