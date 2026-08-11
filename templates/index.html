@@ -221,6 +221,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
             <label>التاريخ</label>
             <input type="date" id="supDate" onchange="loadSupervisorRoster()">
           </div>
+          <div id="supRosterDownload"></div>
           <div id="supRosterList"></div>
           <button class="btn" onclick="submitAbsences()" style="margin-top:14px">💾 حفظ الغياب</button>
         </div>
@@ -247,6 +248,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
           <label>القسم</label>
           <select id="counClassSelect" onchange="loadCounselorRoster()"></select>
         </div>
+        <div id="counRosterDownload"></div>
         <div id="counRosterList"></div>
       </div>
       <div class="card" id="counStudentCard" style="display:none">
@@ -481,11 +483,15 @@ async function loadSupervisorRoster(){
   const absentMap = {};
   (await absRes.json()).forEach(a => absentMap[a.national_id] = a);
 
+  const dlDiv = document.getElementById('supRosterDownload');
   const container = document.getElementById('supRosterList');
   if(roster.length===0){
+    dlDiv.innerHTML = '';
     container.innerHTML = '<div class="empty">لا توجد قائمة تلاميذ لهذا القسم.</div>';
     return;
   }
+  dlDiv.innerHTML = `<div class="roster-badge" style="margin-bottom:8px">👥 ${roster.length} تلميذاً</div>
+    <a class="btn" style="display:inline-block;margin-bottom:14px;background:var(--green);text-decoration:none;font-size:13px;padding:9px 18px" href="/api/roster/${encodeURIComponent(cls)}/export.xlsx">⬇ تحميل قائمة القسم الكاملة (Excel)</a>`;
   container.innerHTML = `<table><tr><th>غائب؟</th><th>اللقب والاسم</th><th>سبب الغياب</th><th>عدد الساعات</th></tr>
     ${roster.map(s=>{
       const a = absentMap[String(s.national_id)];
@@ -565,12 +571,16 @@ async function loadCounselorRoster(){
   const cls = document.getElementById('counClassSelect').value;
   const res = await fetch('/api/roster/' + encodeURIComponent(cls));
   const data = await res.json();
+  const dlDiv = document.getElementById('counRosterDownload');
   const container = document.getElementById('counRosterList');
   document.getElementById('counStudentCard').style.display = 'none';
   if(data.count===0){
+    dlDiv.innerHTML = '';
     container.innerHTML = '<div class="empty">لا توجد قائمة تلاميذ لهذا القسم.</div>';
     return;
   }
+  dlDiv.innerHTML = `<div class="roster-badge" style="margin-bottom:8px">👥 ${data.count} تلميذاً</div>
+    <a class="btn" style="display:inline-block;margin-bottom:14px;background:var(--green);text-decoration:none;font-size:13px;padding:9px 18px" href="/api/roster/${encodeURIComponent(cls)}/export.xlsx">⬇ تحميل قائمة القسم الكاملة (Excel)</a>`;
   container.innerHTML = `<table><tr><th>اللقب والاسم</th><th></th></tr>
     ${data.students.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td><button class="small-btn" onclick='openCounselorStudent(${JSON.stringify(s)})'>فتح الملف</button></td></tr>`).join('')}
     </table>`;
