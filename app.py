@@ -23,6 +23,10 @@ if DATA_FILE is None:
     )
 
 DOCS_FILE = os.path.join(os.path.dirname(DATA_FILE), "documents.json")
+ANN_FILE = os.path.join(os.path.dirname(DATA_FILE), "announcements.json")
+ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "absences.json")
+GUID_FILE = os.path.join(os.path.dirname(DATA_FILE), "guidance.json")
+LOGIN_LOG_FILE = os.path.join(os.path.dirname(DATA_FILE), "login_log.json")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB - real server, no artifact-storage limit
 
@@ -61,6 +65,48 @@ def save_docs(docs):
         json.dump(docs, f, ensure_ascii=False, indent=2)
 
 
+def load_json(path, default):
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    return default
+
+
+def save_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def today_str():
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def log_login(role, uid, name):
+    """Record every login (student/teacher/admin) for the director's daily report."""
+    logs = load_json(LOGIN_LOG_FILE, [])
+    logs.append({
+        "role": role,
+        "id": uid,
+        "name": name,
+        "date": today_str(),
+        "time": datetime.now().strftime("%H:%M:%S"),
+    })
+    # keep the log from growing forever on the free tier's small disk
+    logs = logs[-3000:]
+    save_json(LOGIN_LOG_FILE, logs)
+
+
+def classify_admin_role(role_text):
+    role_text = role_text or ""
+    if "مدير" in role_text and "مساعد" not in role_text:
+        return "director"
+    if "ناظر" in role_text:
+        return "supervisor"
+    if "مستشار" in role_text and "توجيه" in role_text:
+        return "counselor"
+    return None
+
+
 # ---------------- Pages ----------------
 
 @app.route("/")
@@ -79,6 +125,7 @@ def login_student():
     stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
     if not stu:
         return jsonify({"ok": False, "error": "هذا الرقم غير مسجّل في قاعدة بياناتنا الحالية."}), 404
+    log_login("student", nid, f"{stu['last_name']} {stu['first_name']} ({stu['class']})")
     return jsonify({"ok": True, "user": {**stu, "role": "student"}})
 
 
@@ -97,7 +144,28 @@ def login_teacher():
             "ok": False,
             "error": "هذا الرقم مسجّل ضمن الطاقم، لكن لا يوجد له إسناد تربوي حالياً (قد يكون إدارياً)."
         }), 404
+    log_login("teacher", emp_id, f"{staff_row['last_name']} {staff_row['first_name']} ({staff_row['subject']})")
     user = {**staff_row, "role": "teacher", "classes": my_classes}
+    return jsonify({"ok": True, "user": user})
+
+
+@app.route("/api/login/admin", methods=["POST"])
+def login_admin():
+    data = request.get_json(force=True)
+    emp_id = str(data.get("employee_id", "")).strip()
+    if not emp_id:
+        return jsonify({"ok": False, "error": "يرجى إدخال الرقم التعريف الوظيفي."}), 400
+    staff_row = next((s for s in STAFF if str(s["employee_id"]) == emp_id), None)
+    if not staff_row:
+        return jsonify({"ok": False, "error": "هذا الرقم الوظيفي غير مسجّل في قاعدة بياناتنا الحالية."}), 404
+    admin_role = classify_admin_role(staff_row.get("role", ""))
+    if not admin_role:
+        return jsonify({
+            "ok": False,
+            "error": "هذا الرقم مسجّل ضمن الطاقم، لكنه ليس من فئة الإدارة (مدير / ناظر / مستشار توجيه)."
+        }), 404
+    log_login("admin", emp_id, f"{staff_row['last_name']} {staff_row['first_name']} ({staff_row['role']})")
+    user = {**staff_row, "role": "admin", "admin_role": admin_role}
     return jsonify({"ok": True, "user": user})
 
 
@@ -226,6 +294,175 @@ def post_doc(class_name):
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
+
+
+# ---------------- Announcements (أمانة المدير) ----------------
+
+@app.route("/api/announcements", methods=["GET"])
+def list_announcements():
+    return jsonify(load_json(ANN_FILE, []))
+
+
+@app.route("/api/announcements", methods=["POST"])
+def create_announcement():
+    data = request.get_json(force=True)
+    title = (data.get("title") or "").strip()
+    body = (data.get("body") or "").strip()
+    target = data.get("target") or "all"  # 'all' | 'students' | 'teachers' | 'class:<name>'
+    author = data.get("author") or "إدارة المؤسسة"
+    if not title:
+        return jsonify({"ok": False, "error": "عنوان الإعلان مطلوب."}), 400
+    anns = load_json(ANN_FILE, [])
+    anns.insert(0, {
+        "title": title, "body": body, "target": target, "author": author,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_json(ANN_FILE, anns)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/announcements/for/<audience>")
+def announcements_for(audience):
+    """audience = 'students' | 'teachers' | a class name for a student's own class"""
+    anns = load_json(ANN_FILE, [])
+    if audience == "students":
+        result = [a for a in anns if a["target"] in ("all", "students")]
+    elif audience == "teachers":
+        result = [a for a in anns if a["target"] in ("all", "teachers")]
+    else:
+        result = [a for a in anns if a["target"] in ("all", "students", f"class:{audience}")]
+    return jsonify(result)
+
+
+# ---------------- Absences (الناظر) ----------------
+
+@app.route("/api/absences", methods=["POST"])
+def mark_absences():
+    data = request.get_json(force=True)
+    class_name = data.get("class")
+    date = data.get("date") or today_str()
+    student_ids = data.get("national_ids", [])
+    if not class_name:
+        return jsonify({"ok": False, "error": "القسم مطلوب."}), 400
+
+    roster = {str(s["national_id"]): s for s in STUDENTS if s["class"] == class_name}
+    absences = load_json(ABS_FILE, [])
+    # remove previous entries for this class/date, then add the new set (idempotent)
+    absences = [a for a in absences if not (a["class"] == class_name and a["date"] == date)]
+    for nid in student_ids:
+        s = roster.get(str(nid))
+        if s:
+            absences.append({
+                "national_id": str(nid), "last_name": s["last_name"], "first_name": s["first_name"],
+                "class": class_name, "date": date,
+            })
+    save_json(ABS_FILE, absences)
+    return jsonify({"ok": True, "count": len(student_ids)})
+
+
+@app.route("/api/absences")
+def get_absences():
+    date = request.args.get("date") or today_str()
+    class_name = request.args.get("class")
+    absences = load_json(ABS_FILE, [])
+    absences = [a for a in absences if a["date"] == date]
+    if class_name:
+        absences = [a for a in absences if a["class"] == class_name]
+    return jsonify(absences)
+
+
+# ---------------- Guidance (مستشار التوجيه) ----------------
+
+@app.route("/api/guidance/<national_id>", methods=["GET"])
+def get_guidance(national_id):
+    guid = load_json(GUID_FILE, {})
+    return jsonify(guid.get(str(national_id), []))
+
+
+@app.route("/api/guidance/<national_id>", methods=["POST"])
+def add_guidance(national_id):
+    data = request.get_json(force=True)
+    note = (data.get("note") or "").strip()
+    author = data.get("author") or "مستشار التوجيه"
+    if not note:
+        return jsonify({"ok": False, "error": "نص المقابلة مطلوب."}), 400
+    guid = load_json(GUID_FILE, {})
+    guid.setdefault(str(national_id), [])
+    guid[str(national_id)].insert(0, {
+        "note": note, "author": author,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_json(GUID_FILE, guid)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/guidance/recent")
+def recent_guidance():
+    """All interviews for a given date, across all students — for the director's report."""
+    date = request.args.get("date") or today_str()
+    guid = load_json(GUID_FILE, {})
+    result = []
+    for nid, notes in guid.items():
+        stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+        for n in notes:
+            if n["date"].startswith(date):
+                result.append({
+                    "national_id": nid,
+                    "student_name": f"{stu['last_name']} {stu['first_name']}" if stu else nid,
+                    "class": stu["class"] if stu else "—",
+                    **n,
+                })
+    return jsonify(result)
+
+
+# ---------------- Director's daily report ----------------
+
+@app.route("/api/director/daily-report")
+def daily_report():
+    date = request.args.get("date") or today_str()
+
+    logs = [l for l in load_json(LOGIN_LOG_FILE, []) if l["date"] == date]
+    students_logged = [l for l in logs if l["role"] == "student"]
+    teachers_logged = [l for l in logs if l["role"] == "teacher"]
+    admins_logged = [l for l in logs if l["role"] == "admin"]
+
+    absences = [a for a in load_json(ABS_FILE, []) if a["date"] == date]
+
+    docs = load_docs()
+    docs_today = []
+    for class_name, items in docs.items():
+        for d in items:
+            if d["date"].startswith(date):
+                docs_today.append({"class": class_name, **d})
+
+    guid = load_json(GUID_FILE, {})
+    guidance_today = []
+    for nid, notes in guid.items():
+        stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+        for n in notes:
+            if n["date"].startswith(date):
+                guidance_today.append({
+                    "national_id": nid,
+                    "student_name": f"{stu['last_name']} {stu['first_name']}" if stu else nid,
+                    "class": stu["class"] if stu else "—",
+                    **n,
+                })
+
+    return jsonify({
+        "date": date,
+        "logins": {
+            "students": students_logged,
+            "teachers": teachers_logged,
+            "admins": admins_logged,
+        },
+        "absences": absences,
+        "documents_sent": docs_today,
+        "guidance_interviews": guidance_today,
+        "totals": {
+            "students_in_school": len(STUDENTS),
+            "teachers_in_school": len({a["employee_id"] for a in ASSIGNMENTS}),
+        }
+    })
 
 
 if __name__ == "__main__":
