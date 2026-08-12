@@ -26,6 +26,7 @@ DOCS_FILE = os.path.join(os.path.dirname(DATA_FILE), "documents.json")
 ANN_FILE = os.path.join(os.path.dirname(DATA_FILE), "announcements.json")
 ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "absences.json")
 STAFF_ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "staff_absences.json")
+PARENT_PHONES_FILE = os.path.join(os.path.dirname(DATA_FILE), "parent_phones.json")
 GUID_FILE = os.path.join(os.path.dirname(DATA_FILE), "guidance.json")
 LOGIN_LOG_FILE = os.path.join(os.path.dirname(DATA_FILE), "login_log.json")
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -175,7 +176,20 @@ def login_admin():
 @app.route("/api/roster/<class_name>")
 def roster(class_name):
     rows = [s for s in STUDENTS if s["class"] == class_name]
+    phones = load_json(PARENT_PHONES_FILE, {})
+    for r in rows:
+        r["parent_phone"] = phones.get(str(r["national_id"]), "")
     return jsonify({"class": class_name, "count": len(rows), "students": rows})
+
+
+@app.route("/api/parent-phone/<national_id>", methods=["POST"])
+def set_parent_phone(national_id):
+    data = request.get_json(force=True)
+    phone = (data.get("phone") or "").strip()
+    phones = load_json(PARENT_PHONES_FILE, {})
+    phones[str(national_id)] = phone
+    save_json(PARENT_PHONES_FILE, phones)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/roster/<class_name>/export.xlsx")
