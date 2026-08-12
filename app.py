@@ -1,618 +1,522 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>منصة متوسطة الشهيد بن نعمة مصطفى</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;900&display=swap');
-:root{
-  --ink:#1E1B16; --parchment:#F7F3E9; --parchment-2:#EFE8D8;
-  --green:#0F4C3A; --green-deep:#0A362A; --sage:#DCE5DA;
-  --ochre:#C17817; --ochre-deep:#9C5F10; --line:#D8CFB8; --white:#FFFDF8;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Tajawal','Segoe UI',sans-serif;background:var(--parchment);color:var(--ink);line-height:1.7;padding:20px;}
-h1,h2,h3{font-family:'Amiri',serif;}
-.wrap{max-width:1000px;margin:0 auto;}
-.top{background:var(--green);color:#fff;padding:20px 26px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
-.top h1{font-size:20px;}
-.top p{font-size:12.5px;opacity:.85;font-family:'Tajawal';margin-top:4px;}
-#userBadgeWrap{display:flex;align-items:center;gap:10px;}
-.badge-role{background:var(--ochre);padding:5px 14px;border-radius:20px;font-size:12.5px;font-weight:700;}
-.logout-btn{background:transparent;border:1.5px solid rgba(255,255,255,.5);color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-family:'Tajawal';}
-.logout-btn:hover{background:rgba(255,255,255,.15);}
-.switcher{display:flex;gap:8px;margin-bottom:20px;}
-.switcher button{flex:1;padding:13px;border-radius:8px;border:1.5px solid var(--line);background:var(--white);cursor:pointer;font-weight:700;font-size:14px;font-family:'Tajawal';color:#6f6a5c;transition:.2s;}
-.switcher button.active{background:var(--green);color:#fff;border-color:var(--green);}
-.card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:18px;}
-.card h3{font-size:16px;color:var(--green);margin-bottom:14px;}
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
-.field select,.field input,.field textarea{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:6px;font-size:14px;font-family:'Tajawal';background:var(--white);}
-.field textarea{min-height:80px;resize:vertical;}
-.doctype-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
-.doctype-row label{flex:1;min-width:110px;border:1.5px solid var(--line);border-radius:8px;padding:12px;text-align:center;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;}
-.btn{padding:12px 26px;border-radius:7px;border:none;font-weight:700;font-size:14.5px;cursor:pointer;background:var(--ochre);color:#fff;}
-.btn:hover{background:var(--ochre-deep);}
-.btn:disabled{background:#c9c2ab;cursor:not-allowed;}
-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px;}
-th{background:var(--parchment-2);padding:9px 10px;text-align:right;font-weight:700;}
-td{padding:9px 10px;border-bottom:1px solid var(--line);}
-.hint{font-size:12px;color:#8a8574;margin-top:5px;}
-.doc-item{border-right:3px solid var(--ochre);background:var(--parchment-2);border-radius:6px;padding:14px 16px;margin-bottom:10px;}
-.doc-item .dtitle{font-weight:700;font-size:14.5px;color:var(--green);}
-.doc-item .dmeta{font-size:12px;color:#8a8574;margin-top:4px;}
-.doc-item .dbody{font-size:13px;margin-top:8px;color:#3a352b;}
-.doc-item .dtype-tag{display:inline-block;background:var(--green);color:#fff;font-size:10.5px;padding:2px 10px;border-radius:12px;margin-left:8px;}
-.file-chip{display:inline-flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid var(--ochre);color:var(--ochre-deep);padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;margin-top:8px;text-decoration:none;}
-.file-chip:hover{background:var(--ochre);color:#fff;}
-.img-preview{max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;display:block;border:1px solid var(--line);}
-.announcement{border-right:3px solid var(--ochre);background:var(--parchment-2);border-radius:6px;padding:12px 16px;margin-bottom:10px;font-size:13.5px;}
-.roster-badge{font-size:11px;background:var(--sage);color:var(--green);padding:3px 10px;border-radius:12px;font-weight:700;}
-.empty{text-align:center;padding:40px 20px;color:#8a8574;font-size:14px;}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green-deep);color:#fff;padding:14px 26px;border-radius:8px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:.3s;z-index:100;opacity:0;}
-.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-.login-error{color:#C0392B;font-size:13px;margin-top:10px;font-weight:700;min-height:18px;}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="top">
-    <div>
-      <h1>🎓 منصة متوسطة الشهيد بن نعمة مصطفى</h1>
-      <p>تحضير الموسم الدراسي 2026/2027 — نسخة مستضافة حقيقية</p>
-    </div>
-    <div id="userBadgeWrap" style="display:none">
-      <span class="badge-role" id="roleBadge"></span>
-      <button class="logout-btn" onclick="logout()">تسجيل الخروج</button>
-    </div>
-  </div>
+import os
+import json
+import time
+from datetime import datetime
+from flask import Flask, request, jsonify, send_from_directory, render_template
 
-  <div id="loginScreen">
-    <div class="switcher">
-      <button class="active" id="btnLoginStudent" onclick="setLoginTab('student')">🎒 تلميذ</button>
-      <button id="btnLoginTeacher" onclick="setLoginTab('teacher')">👨‍🏫 أستاذ</button>
-      <button id="btnLoginAdmin" onclick="setLoginTab('admin')">🏛️ إدارة</button>
-    </div>
-    <div class="card">
-      <div id="loginStudentForm">
-        <h3>دخول التلميذ</h3>
-        <div class="field">
-          <label>رقم التعريف الوطني المدرسي</label>
-          <input type="text" id="loginStudentId" placeholder="أدخل رقمك الوطني الكامل" inputmode="numeric">
-        </div>
-        <button class="btn" onclick="loginStudent()">دخول فضائي</button>
-        <div id="loginStudentError" class="login-error"></div>
-      </div>
-      <div id="loginTeacherForm" style="display:none">
-        <h3>دخول الأستاذ</h3>
-        <div class="field">
-          <label>الرقم التعريف الوظيفي</label>
-          <input type="text" id="loginTeacherId" placeholder="أدخل رقمك الوظيفي الكامل" inputmode="numeric">
-        </div>
-        <button class="btn" onclick="loginTeacher()">دخول فضائي</button>
-        <div id="loginTeacherError" class="login-error"></div>
-      </div>
-      <div id="loginAdminForm" style="display:none">
-        <h3>دخول الإدارة (مدير / ناظر / مستشار توجيه)</h3>
-        <div class="field">
-          <label>الرقم التعريف الوظيفي</label>
-          <input type="text" id="loginAdminId" placeholder="أدخل رقمك الوظيفي الكامل" inputmode="numeric">
-        </div>
-        <button class="btn" onclick="loginAdmin()">دخول فضائي</button>
-        <div id="loginAdminError" class="login-error"></div>
-      </div>
-    </div>
-  </div>
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-  <div id="appScreen" style="display:none">
-    <div id="teacherMode">
-      <div class="card">
-        <h3>أقسامك المسندة</h3>
-        <div class="field">
-          <label>اختر القسم</label>
-          <select id="classSelect" onchange="onClassChange()"></select>
-        </div>
-        <div id="rosterPreview"></div>
-        <div id="rosterDownloadRow"></div>
-      </div>
+# Search several likely locations for the data file, since manual GitHub
+# uploads sometimes drop files at repo root instead of inside data/.
+_CANDIDATE_PATHS = [
+    os.path.join(BASE_DIR, "data", "school_data.json"),
+    os.path.join(BASE_DIR, "school_data.json"),
+    os.path.join(BASE_DIR, "..", "school_data.json"),
+    os.path.join(BASE_DIR, "..", "data", "school_data.json"),
+]
+DATA_FILE = next((p for p in _CANDIDATE_PATHS if os.path.exists(p)), None)
+if DATA_FILE is None:
+    raise FileNotFoundError(
+        "تعذّر إيجاد school_data.json. تأكد من رفعه إلى المستودع "
+        "(داخل مجلد data/ أو في الجذر مباشرة). تم البحث في: "
+        + ", ".join(_CANDIDATE_PATHS)
+    )
 
-      <div class="card">
-        <h3>📢 إعلانات الإدارة</h3>
-        <div id="teacherAnnList"><div class="empty">جارٍ التحميل...</div></div>
-      </div>
+DOCS_FILE = os.path.join(os.path.dirname(DATA_FILE), "documents.json")
+ANN_FILE = os.path.join(os.path.dirname(DATA_FILE), "announcements.json")
+ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "absences.json")
+STAFF_ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "staff_absences.json")
+GUID_FILE = os.path.join(os.path.dirname(DATA_FILE), "guidance.json")
+LOGIN_LOG_FILE = os.path.join(os.path.dirname(DATA_FILE), "login_log.json")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB - real server, no artifact-storage limit
 
-      <div class="card" id="sendCard" style="display:none">
-        <h3>📤 إرسال وثيقة إلى تلاميذ القسم</h3>
-        <div class="doctype-row">
-          <label><input type="radio" name="doctype" value="درس" checked><span>📘 درس</span></label>
-          <label><input type="radio" name="doctype" value="موضوع فرض"><span>📝 موضوع فرض</span></label>
-          <label><input type="radio" name="doctype" value="موضوع اختبار"><span>📄 موضوع اختبار</span></label>
-        </div>
-        <div class="field"><label>عنوان الوثيقة</label><input type="text" id="docTitle"></div>
-        <div class="field"><label>محتوى / ملاحظات (اختياري)</label><textarea id="docBody"></textarea></div>
-        <div class="field">
-          <label>إرفاق ملف (PDF، Word، صورة)</label>
-          <input type="file" id="docFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-        </div>
-        <button class="btn" id="sendBtn" onclick="sendDoc()">📤 إرسال إلى القسم</button>
-      </div>
-    </div>
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    <div id="studentMode" style="display:none">
-      <div class="card"><div id="studentInfo"></div></div>
-      <div class="switcher">
-        <button class="active" id="stTabDocs" onclick="setStudentTab('docs')">📎 الوثائق المستلمة</button>
-        <button id="stTabAnn" onclick="setStudentTab('ann')">📢 الإعلانات</button>
-      </div>
-      <div class="card" id="stPanelDocs">
-        <h3>📎 الوثائق المستلمة من الأساتذة</h3>
-        <div id="studentDocs"><div class="empty">جارٍ التحميل...</div></div>
-      </div>
-      <div class="card" id="stPanelAnn" style="display:none">
-        <h3>📢 آخر الإعلانات</h3>
-        <div id="studentAnnList"><div class="empty">جارٍ التحميل...</div></div>
-      </div>
-    </div>
+# Same resilience as the data file: find templates/ wherever it actually landed.
+_TEMPLATE_CANDIDATES = [
+    os.path.join(BASE_DIR, "templates"),
+    BASE_DIR,
+]
+TEMPLATE_DIR = next(
+    (p for p in _TEMPLATE_CANDIDATES if os.path.exists(os.path.join(p, "index.html"))),
+    os.path.join(BASE_DIR, "templates"),
+)
 
-    <!-- ADMIN: director -->
-    <div id="directorMode" style="display:none">
-      <div class="card">
-        <h3>📊 التقرير اليومي</h3>
-        <div class="field" style="max-width:220px">
-          <label>التاريخ</label>
-          <input type="date" id="reportDate" onchange="loadDailyReport()">
-        </div>
-      </div>
-      <div class="card">
-        <h3>🔑 من دخل المنصة اليوم</h3>
-        <div id="loginsSummary"></div>
-      </div>
-      <div class="card">
-        <h3>🚫 التلاميذ الغائبون اليوم</h3>
-        <div id="absencesReport"></div>
-      </div>
-      <div class="card">
-        <h3>📎 الوثائق المُرسلة اليوم</h3>
-        <div id="docsReport"></div>
-      </div>
-      <div class="card">
-        <h3>🧭 مقابلات التوجيه اليوم</h3>
-        <div id="guidanceReport"></div>
-      </div>
-      <div class="card">
-        <h3>📢 نشر إعلان جديد</h3>
-        <div class="field"><label>عنوان الإعلان</label><input type="text" id="annTitle"></div>
-        <div class="field"><label>نص الإعلان</label><textarea id="annBody"></textarea></div>
-        <div class="field">
-          <label>الجهة المستهدفة</label>
-          <select id="annTarget">
-            <option value="all">الجميع (تلاميذ + أساتذة)</option>
-            <option value="students">التلاميذ فقط</option>
-            <option value="teachers">الأساتذة فقط</option>
-          </select>
-        </div>
-        <button class="btn" onclick="createAnnouncement()">نشر الإعلان</button>
-      </div>
-    </div>
+app = Flask(__name__, template_folder=TEMPLATE_DIR)
+app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 
-    <!-- ADMIN: supervisor (الناظر) -->
-    <div id="supervisorMode" style="display:none">
-      <div class="card">
-        <h3>تسجيل الغياب اليومي</h3>
-        <div class="field">
-          <label>القسم</label>
-          <select id="supClassSelect" onchange="loadSupervisorRoster()"></select>
-        </div>
-        <div class="field">
-          <label>التاريخ</label>
-          <input type="date" id="supDate" onchange="loadSupervisorRoster()">
-        </div>
-        <div id="supRosterList"></div>
-        <button class="btn" onclick="submitAbsences()" style="margin-top:14px">💾 حفظ الغياب</button>
-      </div>
-    </div>
+with open(DATA_FILE, encoding="utf-8") as f:
+    SCHOOL_DATA = json.load(f)
 
-    <!-- ADMIN: counselor (مستشار التوجيه) -->
-    <div id="counselorMode" style="display:none">
-      <div class="card">
-        <h3>متابعة التوجيه</h3>
-        <div class="field">
-          <label>القسم</label>
-          <select id="counClassSelect" onchange="loadCounselorRoster()"></select>
-        </div>
-        <div id="counRosterList"></div>
-      </div>
-      <div class="card" id="counStudentCard" style="display:none">
-        <h3 id="counStudentTitle"></h3>
-        <div class="field"><label>مقابلة / ملاحظة جديدة</label><textarea id="counNote"></textarea></div>
-        <button class="btn" onclick="addGuidanceNote()">حفظ المقابلة</button>
-        <div id="counHistory" style="margin-top:16px"></div>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="toast" id="toast"></div>
+STUDENTS = SCHOOL_DATA["students"]
+STAFF = SCHOOL_DATA["staff"]
+ASSIGNMENTS = SCHOOL_DATA["assignments"]
 
-<script>
-let currentUser = null;
 
-function setLoginTab(tab){
-  document.getElementById('btnLoginStudent').classList.toggle('active', tab==='student');
-  document.getElementById('btnLoginTeacher').classList.toggle('active', tab==='teacher');
-  document.getElementById('btnLoginAdmin').classList.toggle('active', tab==='admin');
-  document.getElementById('loginStudentForm').style.display = tab==='student' ? 'block':'none';
-  document.getElementById('loginTeacherForm').style.display = tab==='teacher' ? 'block':'none';
-  document.getElementById('loginAdminForm').style.display = tab==='admin' ? 'block':'none';
-}
+def load_docs():
+    if os.path.exists(DOCS_FILE):
+        with open(DOCS_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
-async function loginStudent(){
-  const id = document.getElementById('loginStudentId').value.trim();
-  const errDiv = document.getElementById('loginStudentError');
-  errDiv.innerText = '';
-  const res = await fetch('/api/login/student', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({national_id:id})});
-  const data = await res.json();
-  if(!data.ok){ errDiv.innerText = '⚠️ ' + data.error; return; }
-  currentUser = data.user;
-  enterApp();
-}
 
-async function loginTeacher(){
-  const id = document.getElementById('loginTeacherId').value.trim();
-  const errDiv = document.getElementById('loginTeacherError');
-  errDiv.innerText = '';
-  const res = await fetch('/api/login/teacher', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({employee_id:id})});
-  const data = await res.json();
-  if(!data.ok){ errDiv.innerText = '⚠️ ' + data.error; return; }
-  currentUser = data.user;
-  enterApp();
-}
+def save_docs(docs):
+    with open(DOCS_FILE, "w", encoding="utf-8") as f:
+        json.dump(docs, f, ensure_ascii=False, indent=2)
 
-function logout(){
-  currentUser = null;
-  document.getElementById('loginScreen').style.display = 'block';
-  document.getElementById('appScreen').style.display = 'none';
-  document.getElementById('userBadgeWrap').style.display = 'none';
-  document.getElementById('loginStudentId').value = '';
-  document.getElementById('loginTeacherId').value = '';
-  document.getElementById('loginAdminId').value = '';
-}
 
-async function loginAdmin(){
-  const id = document.getElementById('loginAdminId').value.trim();
-  const errDiv = document.getElementById('loginAdminError');
-  errDiv.innerText = '';
-  const res = await fetch('/api/login/admin', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({employee_id:id})});
-  const data = await res.json();
-  if(!data.ok){ errDiv.innerText = '⚠️ ' + data.error; return; }
-  currentUser = data.user;
-  enterApp();
-}
+def load_json(path, default):
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    return default
 
-async function enterApp(){
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appScreen').style.display = 'block';
-  document.getElementById('userBadgeWrap').style.display = 'flex';
-  const badge = document.getElementById('roleBadge');
 
-  ['teacherMode','studentMode','directorMode','supervisorMode','counselorMode'].forEach(id=>{
-    document.getElementById(id).style.display = 'none';
-  });
+def save_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-  if(currentUser.role==='teacher'){
-    badge.innerText = `أ. ${currentUser.last_name} ${currentUser.first_name} — ${currentUser.subject}`;
-    document.getElementById('teacherMode').style.display = 'block';
-    await populateTeacherClasses();
-    loadAnnouncementsFor('teachers', 'teacherAnnList');
-  } else if(currentUser.role==='student'){
-    badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${currentUser.class}`;
-    document.getElementById('studentMode').style.display = 'block';
-    document.getElementById('studentInfo').innerHTML = `<h3>مرحباً ${currentUser.first_name}</h3><div class="hint">القسم: <b>${currentUser.class}</b> — الجنس: ${currentUser.gender}</div>`;
-    refreshStudentDocs();
-    loadAnnouncementsFor(currentUser.class, 'studentAnnList');
-  } else if(currentUser.role==='admin'){
-    const roleLabels = {director:'المدير', supervisor:'الناظر', counselor:'مستشار التوجيه'};
-    badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${roleLabels[currentUser.admin_role]}`;
-    if(currentUser.admin_role==='director'){
-      document.getElementById('directorMode').style.display = 'block';
-      document.getElementById('reportDate').value = new Date().toISOString().slice(0,10);
-      loadDailyReport();
-    } else if(currentUser.admin_role==='supervisor'){
-      document.getElementById('supervisorMode').style.display = 'block';
-      document.getElementById('supDate').value = new Date().toISOString().slice(0,10);
-      populateClassDropdown('supClassSelect', loadSupervisorRoster);
-    } else if(currentUser.admin_role==='counselor'){
-      document.getElementById('counselorMode').style.display = 'block';
-      populateClassDropdown('counClassSelect', loadCounselorRoster);
-    }
-  }
-}
 
-function populateClassDropdown(selectId, onReady){
-  const ALL_CLASSES = ['1م1','1م2','1م3','2م1','2م2','2م3','3م1','3م2','4م1','4م2','4م3'];
-  const sel = document.getElementById(selectId);
-  sel.innerHTML = '';
-  ALL_CLASSES.forEach(c=>{
-    const opt = document.createElement('option');
-    opt.value = c; opt.innerText = c;
-    sel.appendChild(opt);
-  });
-  onReady();
-}
+def today_str():
+    return datetime.now().strftime("%Y-%m-%d")
 
-// ---- Announcements ----
-async function loadAnnouncementsFor(audience, containerId){
-  const res = await fetch('/api/announcements/for/' + encodeURIComponent(audience));
-  const anns = await res.json();
-  const container = document.getElementById(containerId);
-  if(anns.length===0){
-    container.innerHTML = `<div class="empty">لا توجد إعلانات حالياً.</div>`;
-    return;
-  }
-  container.innerHTML = anns.map(a => `
-    <div class="announcement">
-      <b>${a.title}</b>
-      ${a.body ? `<div style="margin-top:4px">${a.body}</div>` : ''}
-      <div class="dmeta">${a.author} — ${a.date}</div>
-    </div>`).join('');
-}
 
-async function createAnnouncement(){
-  const title = document.getElementById('annTitle').value.trim();
-  const body = document.getElementById('annBody').value.trim();
-  const target = document.getElementById('annTarget').value;
-  if(!title){ showToast('⚠️ عنوان الإعلان مطلوب'); return; }
-  const res = await fetch('/api/announcements', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({title, body, target, author: `${currentUser.last_name} ${currentUser.first_name}`})
-  });
-  const data = await res.json();
-  if(data.ok){
-    showToast('✔ تم نشر الإعلان');
-    document.getElementById('annTitle').value='';
-    document.getElementById('annBody').value='';
-  } else {
-    showToast('⚠️ ' + (data.error||'تعذّر النشر'));
-  }
-}
+def log_login(role, uid, name):
+    """Record every login (student/teacher/admin) for the director's daily report."""
+    logs = load_json(LOGIN_LOG_FILE, [])
+    logs.append({
+        "role": role,
+        "id": uid,
+        "name": name,
+        "date": today_str(),
+        "time": datetime.now().strftime("%H:%M:%S"),
+    })
+    # keep the log from growing forever on the free tier's small disk
+    logs = logs[-3000:]
+    save_json(LOGIN_LOG_FILE, logs)
 
-// ---- Director: daily report ----
-async function loadDailyReport(){
-  const date = document.getElementById('reportDate').value;
-  const res = await fetch('/api/director/daily-report?date=' + date);
-  const r = await res.json();
 
-  document.getElementById('loginsSummary').innerHTML = `
-    <div class="roster-badge">🎒 تلاميذ دخلوا: ${r.logins.students.length}</div>
-    <div class="roster-badge">👨‍🏫 أساتذة دخلوا: ${r.logins.teachers.length}</div>
-    <div class="roster-badge">🏛️ إدارة دخلت: ${r.logins.admins.length}</div>
-    <table><tr><th>الاسم</th><th>الصفة</th><th>الوقت</th></tr>
-    ${[...r.logins.students, ...r.logins.teachers, ...r.logins.admins].map(l=>`<tr><td>${l.name}</td><td>${l.role==='student'?'تلميذ':l.role==='teacher'?'أستاذ':'إدارة'}</td><td>${l.time}</td></tr>`).join('') || '<tr><td colspan="3">لا يوجد دخول مسجَّل</td></tr>'}
-    </table>`;
+def classify_admin_role(role_text):
+    role_text = role_text or ""
+    if "مدير" in role_text and "مساعد" not in role_text:
+        return "director"
+    if "ناظر" in role_text:
+        return "supervisor"
+    if "مستشار" in role_text and "توجيه" in role_text:
+        return "counselor"
+    return None
 
-  document.getElementById('absencesReport').innerHTML = r.absences.length ? `
-    <div class="roster-badge">🚫 العدد: ${r.absences.length}</div>
-    <table><tr><th>اللقب</th><th>الاسم</th><th>القسم</th></tr>
-    ${r.absences.map(a=>`<tr><td>${a.last_name}</td><td>${a.first_name}</td><td>${a.class}</td></tr>`).join('')}
-    </table>` : '<div class="empty">لا غياب مسجَّل لهذا اليوم.</div>';
 
-  document.getElementById('docsReport').innerHTML = r.documents_sent.length ? `
-    <table><tr><th>القسم</th><th>العنوان</th><th>النوع</th><th>الأستاذ</th></tr>
-    ${r.documents_sent.map(d=>`<tr><td>${d.class}</td><td>${d.title}</td><td>${d.doctype}</td><td>${d.teacher}</td></tr>`).join('')}
-    </table>` : '<div class="empty">لا وثائق مُرسلة لهذا اليوم.</div>';
+# ---------------- Pages ----------------
 
-  document.getElementById('guidanceReport').innerHTML = r.guidance_interviews.length ? `
-    <table><tr><th>التلميذ</th><th>القسم</th><th>الملاحظة</th><th>المستشار</th></tr>
-    ${r.guidance_interviews.map(g=>`<tr><td>${g.student_name}</td><td>${g.class}</td><td>${g.note}</td><td>${g.author}</td></tr>`).join('')}
-    </table>` : '<div class="empty">لا مقابلات توجيه لهذا اليوم.</div>';
-}
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-// ---- Supervisor: absences ----
-async function loadSupervisorRoster(){
-  const cls = document.getElementById('supClassSelect').value;
-  const date = document.getElementById('supDate').value;
-  const [rosterRes, absRes] = await Promise.all([
-    fetch('/api/roster/' + encodeURIComponent(cls)),
-    fetch(`/api/absences?class=${encodeURIComponent(cls)}&date=${date}`)
-  ]);
-  const roster = (await rosterRes.json()).students;
-  const absentIds = new Set((await absRes.json()).map(a=>a.national_id));
 
-  const container = document.getElementById('supRosterList');
-  if(roster.length===0){
-    container.innerHTML = '<div class="empty">لا توجد قائمة تلاميذ لهذا القسم.</div>';
-    return;
-  }
-  container.innerHTML = `<table><tr><th>غائب؟</th><th>اللقب والاسم</th></tr>
-    ${roster.map(s=>`<tr><td><input type="checkbox" class="absCheck" value="${s.national_id}" ${absentIds.has(String(s.national_id))?'checked':''}></td><td>${s.last_name} ${s.first_name}</td></tr>`).join('')}
-    </table>`;
-}
+# ---------------- Auth ----------------
 
-async function submitAbsences(){
-  const cls = document.getElementById('supClassSelect').value;
-  const date = document.getElementById('supDate').value;
-  const ids = [...document.querySelectorAll('.absCheck:checked')].map(cb=>cb.value);
-  const res = await fetch('/api/absences', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({class: cls, date, national_ids: ids})
-  });
-  const data = await res.json();
-  if(data.ok) showToast(`✔ تم حفظ الغياب (${data.count} تلميذاً غائباً)`);
-  else showToast('⚠️ تعذّر الحفظ');
-}
+@app.route("/api/login/student", methods=["POST"])
+def login_student():
+    data = request.get_json(force=True)
+    nid = str(data.get("national_id", "")).strip()
+    if not nid:
+        return jsonify({"ok": False, "error": "يرجى إدخال الرقم التعريف الوطني."}), 400
+    stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+    if not stu:
+        return jsonify({"ok": False, "error": "هذا الرقم غير مسجّل في قاعدة بياناتنا الحالية."}), 404
+    log_login("student", nid, f"{stu['last_name']} {stu['first_name']} ({stu['class']})")
+    return jsonify({"ok": True, "user": {**stu, "role": "student"}})
 
-// ---- Counselor: guidance ----
-async function loadCounselorRoster(){
-  const cls = document.getElementById('counClassSelect').value;
-  const res = await fetch('/api/roster/' + encodeURIComponent(cls));
-  const data = await res.json();
-  const container = document.getElementById('counRosterList');
-  document.getElementById('counStudentCard').style.display = 'none';
-  if(data.count===0){
-    container.innerHTML = '<div class="empty">لا توجد قائمة تلاميذ لهذا القسم.</div>';
-    return;
-  }
-  container.innerHTML = `<table><tr><th>اللقب والاسم</th><th></th></tr>
-    ${data.students.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td><button class="small-btn" onclick='openCounselorStudent(${JSON.stringify(s)})'>فتح الملف</button></td></tr>`).join('')}
-    </table>`;
-}
 
-let counselorCurrentStudent = null;
-async function openCounselorStudent(stu){
-  counselorCurrentStudent = stu;
-  document.getElementById('counStudentCard').style.display = 'block';
-  document.getElementById('counStudentTitle').innerText = `ملف التوجيه: ${stu.last_name} ${stu.first_name} (${stu.class})`;
-  document.getElementById('counNote').value = '';
-  await refreshCounselorHistory();
-}
+@app.route("/api/login/teacher", methods=["POST"])
+def login_teacher():
+    data = request.get_json(force=True)
+    emp_id = str(data.get("employee_id", "")).strip()
+    if not emp_id:
+        return jsonify({"ok": False, "error": "يرجى إدخال الرقم التعريف الوظيفي."}), 400
+    staff_row = next((s for s in STAFF if str(s["employee_id"]) == emp_id), None)
+    if not staff_row:
+        return jsonify({"ok": False, "error": "هذا الرقم الوظيفي غير مسجّل في قاعدة بياناتنا الحالية."}), 404
+    my_classes = [a for a in ASSIGNMENTS if str(a["employee_id"]) == emp_id]
+    if not my_classes:
+        return jsonify({
+            "ok": False,
+            "error": "هذا الرقم مسجّل ضمن الطاقم، لكن لا يوجد له إسناد تربوي حالياً (قد يكون إدارياً)."
+        }), 404
+    log_login("teacher", emp_id, f"{staff_row['last_name']} {staff_row['first_name']} ({staff_row['subject']})")
+    user = {**staff_row, "role": "teacher", "classes": my_classes}
+    return jsonify({"ok": True, "user": user})
 
-async function refreshCounselorHistory(){
-  const res = await fetch('/api/guidance/' + counselorCurrentStudent.national_id);
-  const notes = await res.json();
-  const container = document.getElementById('counHistory');
-  container.innerHTML = notes.length ? `<h3 style="font-size:14px">سجل المقابلات السابقة</h3>` + notes.map(n=>`
-    <div class="announcement">${n.note}<div class="dmeta">${n.author} — ${n.date}</div></div>
-  `).join('') : '<div class="hint">لا مقابلات سابقة مسجَّلة.</div>';
-}
 
-async function addGuidanceNote(){
-  const note = document.getElementById('counNote').value.trim();
-  if(!note){ showToast('⚠️ يرجى كتابة نص المقابلة'); return; }
-  const res = await fetch('/api/guidance/' + counselorCurrentStudent.national_id, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({note, author: `${currentUser.last_name} ${currentUser.first_name}`})
-  });
-  const data = await res.json();
-  if(data.ok){
-    showToast('✔ تم حفظ المقابلة');
-    document.getElementById('counNote').value = '';
-    await refreshCounselorHistory();
-  } else {
-    showToast('⚠️ تعذّر الحفظ');
-  }
-}
+@app.route("/api/login/admin", methods=["POST"])
+def login_admin():
+    data = request.get_json(force=True)
+    emp_id = str(data.get("employee_id", "")).strip()
+    if not emp_id:
+        return jsonify({"ok": False, "error": "يرجى إدخال الرقم التعريف الوظيفي."}), 400
+    staff_row = next((s for s in STAFF if str(s["employee_id"]) == emp_id), None)
+    if not staff_row:
+        return jsonify({"ok": False, "error": "هذا الرقم الوظيفي غير مسجّل في قاعدة بياناتنا الحالية."}), 404
+    admin_role = classify_admin_role(staff_row.get("role", ""))
+    if not admin_role:
+        return jsonify({
+            "ok": False,
+            "error": "هذا الرقم مسجّل ضمن الطاقم، لكنه ليس من فئة الإدارة (مدير / ناظر / مستشار توجيه)."
+        }), 404
+    log_login("admin", emp_id, f"{staff_row['last_name']} {staff_row['first_name']} ({staff_row['role']})")
+    user = {**staff_row, "role": "admin", "admin_role": admin_role}
+    return jsonify({"ok": True, "user": user})
 
-async function populateTeacherClasses(){
-  const classSelect = document.getElementById('classSelect');
-  classSelect.innerHTML = '';
-  const withCounts = [];
-  for(const c of currentUser.classes){
-    const res = await fetch('/api/roster/' + encodeURIComponent(c.class));
-    const data = await res.json();
-    withCounts.push({class: c.class, count: data.count});
-  }
-  withCounts.sort((a,b)=>b.count-a.count);
-  withCounts.forEach(c=>{
-    const opt = document.createElement('option');
-    opt.value = c.class;
-    opt.innerText = c.count>0 ? `${c.class} (${c.count} تلميذاً)` : `${c.class} — لا توجد قائمة بعد`;
-    classSelect.appendChild(opt);
-  });
-  onClassChange();
-}
 
-async function onClassChange(){
-  const cls = document.getElementById('classSelect').value;
-  const res = await fetch('/api/roster/' + encodeURIComponent(cls));
-  const data = await res.json();
-  const div = document.getElementById('rosterPreview');
-  const dlDiv = document.getElementById('rosterDownloadRow');
-  const sendCard = document.getElementById('sendCard');
-  if(data.count===0){
-    div.innerHTML = `<div class="empty">ℹ️ قسم ${cls} لم يُشكَّل بعد.</div>`;
-    dlDiv.innerHTML = '';
-    sendCard.style.display = 'none';
-    return;
-  }
-  sendCard.style.display = 'block';
-  const roster = data.students;
-  div.innerHTML = `<div class="roster-badge">👥 ${data.count} تلميذاً في هذا القسم</div>
-    <table><tr><th>اللقب والاسم</th><th>الجنس</th></tr>
-    ${roster.slice(0,6).map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.gender}</td></tr>`).join('')}
-    </table>
-    ${roster.length>6 ? `<div class="hint">+ ${roster.length-6} تلميذاً آخر...</div>` : ''}`;
-  dlDiv.innerHTML = `<a class="btn" style="display:inline-block;margin-top:12px;background:var(--green);text-decoration:none" href="/api/roster/${encodeURIComponent(cls)}/export.xlsx">⬇ تحميل قائمة القسم الكاملة (Excel)</a>`;
-}
+# ---------------- Class rosters ----------------
 
-async function sendDoc(){
-  const cls = document.getElementById('classSelect').value;
-  const doctype = document.querySelector('input[name="doctype"]:checked').value;
-  const title = document.getElementById('docTitle').value.trim();
-  const body = document.getElementById('docBody').value.trim();
-  const fileInput = document.getElementById('docFile');
-  const file = fileInput.files[0];
-  if(!title){ showToast('⚠️ يرجى كتابة عنوان الوثيقة'); return; }
+@app.route("/api/roster/<class_name>")
+def roster(class_name):
+    rows = [s for s in STUDENTS if s["class"] == class_name]
+    return jsonify({"class": class_name, "count": len(rows), "students": rows})
 
-  const sendBtn = document.getElementById('sendBtn');
-  sendBtn.disabled = true; sendBtn.innerText = '⏳ جارٍ الإرسال...';
 
-  const fd = new FormData();
-  fd.append('title', title);
-  fd.append('body', body);
-  fd.append('doctype', doctype);
-  fd.append('teacher_name', `${currentUser.last_name} ${currentUser.first_name}`);
-  fd.append('subject', currentUser.subject);
-  if(file) fd.append('file', file);
+@app.route("/api/roster/<class_name>/export.xlsx")
+def export_roster_csv(class_name):
+    rows = [s for s in STUDENTS if s["class"] == class_name]
 
-  try{
-    const res = await fetch('/api/docs/' + encodeURIComponent(cls), {method:'POST', body: fd});
-    const data = await res.json();
-    if(data.ok){
-      showToast(`✔ تم الإرسال إلى ${cls}`);
-      document.getElementById('docTitle').value='';
-      document.getElementById('docBody').value='';
-      fileInput.value='';
-    } else {
-      showToast('⚠️ ' + (data.error || 'تعذّر الإرسال'));
-    }
-  }catch(e){
-    showToast('⚠️ خطأ في الاتصال بالخادم');
-  }
-  sendBtn.disabled = false; sendBtn.innerText = '📤 إرسال إلى القسم';
-}
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from flask import Response
+    from urllib.parse import quote
+    import io
 
-async function refreshStudentDocs(){
-  const res = await fetch('/api/docs/' + encodeURIComponent(currentUser.class));
-  const docs = await res.json();
-  const container = document.getElementById('studentDocs');
-  if(docs.length===0){
-    container.innerHTML = `<div class="empty">لا توجد وثائق مرسلة لقسم ${currentUser.class} بعد.</div>`;
-    return;
-  }
-  container.innerHTML = docs.map(d => `
-    <div class="doc-item">
-      <div class="dtitle">${d.title} <span class="dtype-tag">${d.doctype}</span></div>
-      <div class="dmeta">${d.subject} — أ. ${d.teacher} — ${d.date}</div>
-      ${d.body ? `<div class="dbody">${d.body}</div>` : ''}
-      ${d.fileUrl ? renderFile(d) : ''}
-    </div>`).join('');
-}
+    wb = Workbook()
+    ws = wb.active
+    ws.title = class_name
+    ws.sheet_view.rightToLeft = True
 
-function renderFile(d){
-  const ext = (d.fileName||'').split('.').pop().toLowerCase();
-  const isImage = ['jpg','jpeg','png','gif'].includes(ext);
-  if(isImage){
-    return `<img src="${d.fileUrl}" class="img-preview" alt="${d.fileName}"><br>
-      <a href="${d.fileUrl}" download="${d.fileName}" class="file-chip">⬇ تحميل الصورة</a>`;
-  }
-  const icon = ext==='pdf' ? '📕' : '📄';
-  return `<a href="${d.fileUrl}" download="${d.fileName}" class="file-chip">${icon} تحميل الملف — ${d.fileName}</a>`;
-}
+    GREEN = "0F4C3A"
+    OCHRE = "C17817"
+    thin = Side(style="thin", color="D8CFB8")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-function setStudentTab(tab){
-  document.getElementById('stTabDocs').classList.toggle('active', tab==='docs');
-  document.getElementById('stTabAnn').classList.toggle('active', tab==='ann');
-  document.getElementById('stPanelDocs').style.display = tab==='docs' ? 'block':'none';
-  document.getElementById('stPanelAnn').style.display = tab==='ann' ? 'block':'none';
-}
+    ncols = 5
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
+    ws["A1"] = f"متوسطة الشهيد بن نعمة مصطفى — قائمة تلاميذ قسم {class_name}"
+    ws["A1"].font = Font(name="Arial", size=13, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor=GREEN)
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 26
 
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.innerText = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 3200);
-}
-</script>
-</body>
-</html>
+    headers = ["الرقم", "اللقب", "الاسم", "الجنس", "الرقم التعريف الوطني"]
+    for i, h in enumerate(headers, start=1):
+        c = ws.cell(row=3, column=i, value=h)
+        c.font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+        c.fill = PatternFill("solid", fgColor=OCHRE)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border = border
+
+    for idx, s in enumerate(rows, start=1):
+        r = idx + 3
+        values = [idx, s["last_name"], s["first_name"], s["gender"], s["national_id"]]
+        for c_i, val in enumerate(values, start=1):
+            cell = ws.cell(row=r, column=c_i, value=val)
+            cell.font = Font(name="Arial", size=10.5)
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = border
+            if r % 2 == 0:
+                cell.fill = PatternFill("solid", fgColor="FBFAF6")
+
+    widths = [7, 20, 20, 8, 20]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.freeze_panes = "A4"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"قائمة_قسم_{class_name}.xlsx"
+    encoded_filename = quote(filename)
+    return Response(
+        buf.read(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=roster.xlsx; filename*=UTF-8''{encoded_filename}",
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+        }
+    )
+
+
+# ---------------- Documents (send/receive) ----------------
+
+@app.route("/api/docs/<class_name>", methods=["GET"])
+def get_docs(class_name):
+    docs = load_docs()
+    return jsonify(docs.get(class_name, []))
+
+
+@app.route("/api/docs/<class_name>", methods=["POST"])
+def post_doc(class_name):
+    title = request.form.get("title", "").strip()
+    body = request.form.get("body", "").strip()
+    doctype = request.form.get("doctype", "درس")
+    teacher_name = request.form.get("teacher_name", "")
+    subject = request.form.get("subject", "")
+
+    if not title:
+        return jsonify({"ok": False, "error": "عنوان الوثيقة مطلوب."}), 400
+
+    file_url = None
+    file_name = None
+    file_obj = request.files.get("file")
+    if file_obj and file_obj.filename:
+        safe_name = f"{int(time.time()*1000)}_{file_obj.filename}"
+        file_obj.save(os.path.join(UPLOAD_DIR, safe_name))
+        file_name = file_obj.filename
+        file_url = f"/uploads/{safe_name}"
+
+    docs = load_docs()
+    docs.setdefault(class_name, [])
+    docs[class_name].insert(0, {
+        "title": title,
+        "body": body,
+        "doctype": doctype,
+        "teacher": teacher_name,
+        "subject": subject,
+        "fileUrl": file_url,
+        "fileName": file_name,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_docs(docs)
+    return jsonify({"ok": True})
+
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
+
+
+# ---------------- Announcements (أمانة المدير) ----------------
+
+@app.route("/api/announcements", methods=["GET"])
+def list_announcements():
+    return jsonify(load_json(ANN_FILE, []))
+
+
+@app.route("/api/announcements", methods=["POST"])
+def create_announcement():
+    data = request.get_json(force=True)
+    title = (data.get("title") or "").strip()
+    body = (data.get("body") or "").strip()
+    target = data.get("target") or "all"  # 'all' | 'students' | 'teachers' | 'class:<name>'
+    author = data.get("author") or "إدارة المؤسسة"
+    if not title:
+        return jsonify({"ok": False, "error": "عنوان الإعلان مطلوب."}), 400
+    anns = load_json(ANN_FILE, [])
+    anns.insert(0, {
+        "title": title, "body": body, "target": target, "author": author,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_json(ANN_FILE, anns)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/announcements/for/<audience>")
+def announcements_for(audience):
+    """audience = 'students' | 'teachers' | a class name for a student's own class"""
+    anns = load_json(ANN_FILE, [])
+    if audience == "students":
+        result = [a for a in anns if a["target"] in ("all", "students")]
+    elif audience == "teachers":
+        result = [a for a in anns if a["target"] in ("all", "teachers")]
+    else:
+        result = [a for a in anns if a["target"] in ("all", "students", f"class:{audience}")]
+    return jsonify(result)
+
+
+# ---------------- Staff directory (for الناظر: teachers + supervisors) ----------------
+
+@app.route("/api/staff/teaching-and-supervisory")
+def staff_teaching_and_supervisory():
+    result = [
+        s for s in STAFF
+        if "أستاذ" in (s.get("role") or "") or "مشرف" in (s.get("role") or "")
+    ]
+    return jsonify(result)
+
+
+# ---------------- Absences — students (الناظر) ----------------
+
+@app.route("/api/absences", methods=["POST"])
+def mark_absences():
+    data = request.get_json(force=True)
+    class_name = data.get("class")
+    date = data.get("date") or today_str()
+    records = data.get("records", [])  # [{national_id, reason, hours}]
+    if not class_name:
+        return jsonify({"ok": False, "error": "القسم مطلوب."}), 400
+
+    roster = {str(s["national_id"]): s for s in STUDENTS if s["class"] == class_name}
+    absences = load_json(ABS_FILE, [])
+    absences = [a for a in absences if not (a["class"] == class_name and a["date"] == date)]
+    for rec in records:
+        nid = str(rec.get("national_id", ""))
+        s = roster.get(nid)
+        if s:
+            absences.append({
+                "national_id": nid, "last_name": s["last_name"], "first_name": s["first_name"],
+                "class": class_name, "date": date,
+                "reason": (rec.get("reason") or "").strip(),
+                "hours": rec.get("hours") or 0,
+            })
+    save_json(ABS_FILE, absences)
+    return jsonify({"ok": True, "count": len(records)})
+
+
+@app.route("/api/absences")
+def get_absences():
+    date = request.args.get("date") or today_str()
+    class_name = request.args.get("class")
+    absences = load_json(ABS_FILE, [])
+    absences = [a for a in absences if a["date"] == date]
+    if class_name:
+        absences = [a for a in absences if a["class"] == class_name]
+    return jsonify(absences)
+
+
+# ---------------- Absences — staff: teachers & supervisors (الناظر) ----------------
+
+@app.route("/api/staff-absences", methods=["POST"])
+def mark_staff_absences():
+    data = request.get_json(force=True)
+    date = data.get("date") or today_str()
+    records = data.get("records", [])  # [{employee_id, reason, hours}]
+
+    staff_by_id = {str(s["employee_id"]): s for s in STAFF}
+    staff_abs = load_json(STAFF_ABS_FILE, [])
+    staff_abs = [a for a in staff_abs if a["date"] != date]
+    for rec in records:
+        eid = str(rec.get("employee_id", ""))
+        s = staff_by_id.get(eid)
+        if s:
+            staff_abs.append({
+                "employee_id": eid, "last_name": s["last_name"], "first_name": s["first_name"],
+                "role": s["role"], "date": date,
+                "reason": (rec.get("reason") or "").strip(),
+                "hours": rec.get("hours") or 0,
+            })
+    save_json(STAFF_ABS_FILE, staff_abs)
+    return jsonify({"ok": True, "count": len(records)})
+
+
+@app.route("/api/staff-absences")
+def get_staff_absences():
+    date = request.args.get("date") or today_str()
+    staff_abs = [a for a in load_json(STAFF_ABS_FILE, []) if a["date"] == date]
+    return jsonify(staff_abs)
+
+
+# ---------------- Guidance (مستشار التوجيه) ----------------
+
+@app.route("/api/guidance/<national_id>", methods=["GET"])
+def get_guidance(national_id):
+    guid = load_json(GUID_FILE, {})
+    return jsonify(guid.get(str(national_id), []))
+
+
+@app.route("/api/guidance/<national_id>", methods=["POST"])
+def add_guidance(national_id):
+    data = request.get_json(force=True)
+    reason = (data.get("reason") or "").strip()
+    actions = (data.get("actions") or "").strip()
+    author = data.get("author") or "مستشار التوجيه"
+    if not reason:
+        return jsonify({"ok": False, "error": "سبب اللقاء مطلوب."}), 400
+    guid = load_json(GUID_FILE, {})
+    guid.setdefault(str(national_id), [])
+    guid[str(national_id)].insert(0, {
+        "reason": reason, "actions": actions, "author": author,
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_json(GUID_FILE, guid)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/guidance/recent")
+def recent_guidance():
+    """All interviews for a given date, across all students — for the director's report
+    and for the counselor's own overview list."""
+    date = request.args.get("date") or today_str()
+    guid = load_json(GUID_FILE, {})
+    result = []
+    for nid, notes in guid.items():
+        stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+        for n in notes:
+            if n["date"].startswith(date):
+                result.append({
+                    "national_id": nid,
+                    "last_name": stu["last_name"] if stu else "",
+                    "first_name": stu["first_name"] if stu else nid,
+                    "class": stu["class"] if stu else "—",
+                    **n,
+                })
+    return jsonify(result)
+
+
+# ---------------- Director's daily report ----------------
+
+@app.route("/api/director/daily-report")
+def daily_report():
+    date = request.args.get("date") or today_str()
+
+    logs = [l for l in load_json(LOGIN_LOG_FILE, []) if l["date"] == date]
+    students_logged = [l for l in logs if l["role"] == "student"]
+    teachers_logged = [l for l in logs if l["role"] == "teacher"]
+    admins_logged = [l for l in logs if l["role"] == "admin"]
+
+    absences = [a for a in load_json(ABS_FILE, []) if a["date"] == date]
+    staff_absences = [a for a in load_json(STAFF_ABS_FILE, []) if a["date"] == date]
+
+    docs = load_docs()
+    docs_today = []
+    for class_name, items in docs.items():
+        for d in items:
+            if d["date"].startswith(date):
+                docs_today.append({"class": class_name, **d})
+
+    guid = load_json(GUID_FILE, {})
+    guidance_today = []
+    for nid, notes in guid.items():
+        stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+        for n in notes:
+            if n["date"].startswith(date):
+                guidance_today.append({
+                    "national_id": nid,
+                    "last_name": stu["last_name"] if stu else "",
+                    "first_name": stu["first_name"] if stu else nid,
+                    "class": stu["class"] if stu else "—",
+                    **n,
+                })
+
+    return jsonify({
+        "date": date,
+        "logins": {
+            "students": students_logged,
+            "teachers": teachers_logged,
+            "admins": admins_logged,
+        },
+        "absences": absences,
+        "staff_absences": staff_absences,
+        "documents_sent": docs_today,
+        "guidance_interviews": guidance_today,
+        "totals": {
+            "students_in_school": len(STUDENTS),
+            "teachers_in_school": len({a["employee_id"] for a in ASSIGNMENTS}),
+        }
+    })
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
