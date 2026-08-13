@@ -2,21 +2,36 @@
 طبقة قاعدة البيانات — تُستعمل تلقائياً بمجرد وجود متغيّر البيئة DATABASE_URL
 (رابط اتصال Supabase/PostgreSQL). إن لم يوجد هذا المتغيّر، يبقى DB_ENABLED=False
 ويستمر app.py باستعمال ملفات JSON المحلية كما كان — لا يحدث أي عطل أثناء الانتقال.
+
+يستعمل pg8000 (سائق PostgreSQL مكتوب بلغة بايثون خالصة، بلا أي كود C مُصرَّف)
+لتفادي مشاكل التوافق مع إصدارات بايثون الحديثة التي يستعملها Render أحياناً.
 """
 import os
-import json
-from datetime import datetime
+import ssl
+from urllib.parse import urlparse
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_ENABLED = bool(DATABASE_URL)
 
 if DB_ENABLED:
-    import psycopg2
-    import psycopg2.extras
+    import pg8000.dbapi
+
+    _parsed = urlparse(DATABASE_URL)
+    _DB_HOST = _parsed.hostname
+    _DB_PORT = _parsed.port or 5432
+    _DB_USER = _parsed.username
+    _DB_PASSWORD = _parsed.password
+    _DB_NAME = (_parsed.path or "/postgres").lstrip("/")
 
 
 def get_conn():
-    return psycopg2.connect(DATABASE_URL, sslmode="require")
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    return pg8000.dbapi.connect(
+        user=_DB_USER, password=_DB_PASSWORD, host=_DB_HOST,
+        port=_DB_PORT, database=_DB_NAME, ssl_context=ssl_context,
+    )
 
 
 def init_db():
