@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template
-
+import db as db
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Search several likely locations for the data file, since manual GitHub
@@ -54,6 +54,8 @@ STUDENTS = SCHOOL_DATA["students"]
 STAFF = SCHOOL_DATA["staff"]
 ASSIGNMENTS = SCHOOL_DATA["assignments"]
 
+db.init_db()  # no-op if DATABASE_URL isn't set — JSON files keep working meanwhile
+
 
 def load_docs():
     if os.path.exists(DOCS_FILE):
@@ -85,6 +87,9 @@ def today_str():
 
 def log_login(role, uid, name):
     """Record every login (student/teacher/admin) for the director's daily report."""
+    if db.DB_ENABLED:
+        db.log_login(role, uid, name)
+        return
     logs = load_json(LOGIN_LOG_FILE, [])
     logs.append({
         "role": role,
@@ -175,8 +180,8 @@ def login_admin():
 
 @app.route("/api/roster/<class_name>")
 def roster(class_name):
-    rows = [s for s in STUDENTS if s["class"] == class_name]
-    phones = load_json(PARENT_PHONES_FILE, {})
+    rows = [dict(s) for s in STUDENTS if s["class"] == class_name]
+    phones = db.get_parent_phones_bulk() if db.DB_ENABLED else load_json(PARENT_PHONES_FILE, {})
     for r in rows:
         r["parent_phone"] = phones.get(str(r["national_id"]), "")
     return jsonify({"class": class_name, "count": len(rows), "students": rows})
@@ -186,9 +191,12 @@ def roster(class_name):
 def set_parent_phone(national_id):
     data = request.get_json(force=True)
     phone = (data.get("phone") or "").strip()
-    phones = load_json(PARENT_PHONES_FILE, {})
-    phones[str(national_id)] = phone
-    save_json(PARENT_PHONES_FILE, phones)
+    if db.DB_ENABLED:
+        db.set_parent_phone(str(national_id), phone)
+    else:
+        phones = load_json(PARENT_PHONES_FILE, {})
+        phones[str(national_id)] = phone
+        save_json(PARENT_PHONES_FILE, phones)
     return jsonify({"ok": True})
 
 
@@ -266,6 +274,8 @@ def export_roster_csv(class_name):
 
 @app.route("/api/docs/<class_name>", methods=["GET"])
 def get_docs(class_name):
+    if db.DB_ENABLED:
+        return jsonify(db.get_documents(class_name))
     docs = load_docs()
     return jsonify(docs.get(class_name, []))
 
@@ -289,6 +299,10 @@ def post_doc(class_name):
         file_obj.save(os.path.join(UPLOAD_DIR, safe_name))
         file_name = file_obj.filename
         file_url = f"/uploads/{safe_name}"
+
+    if db.DB_ENABLED:
+        db.add_document(class_name, title, body, doctype, teacher_name, subject, file_url, file_name)
+        return jsonify({"ok": True})
 
     docs = load_docs()
     docs.setdefault(class_name, [])
@@ -315,6 +329,8 @@ def uploaded_file(filename):
 
 @app.route("/api/announcements", methods=["GET"])
 def list_announcements():
+    if db.DB_ENABLED:
+        return jsonify(db.get_announcements())
     return jsonify(load_json(ANN_FILE, []))
 
 
@@ -327,6 +343,9 @@ def create_announcement():
     author = data.get("author") or "إدارة المؤسسة"
     if not title:
         return jsonify({"ok": False, "error": "عنوان الإعلان مطلوب."}), 400
+    if db.DB_ENABLED:
+        db.add_announcement(title, body, target, author)
+        return jsonify({"ok": True})
     anns = load_json(ANN_FILE, [])
     anns.insert(0, {
         "title": title, "body": body, "target": target, "author": author,
@@ -339,7 +358,7 @@ def create_announcement():
 @app.route("/api/announcements/for/<audience>")
 def announcements_for(audience):
     """audience = 'students' | 'teachers' | a class name for a student's own class"""
-    anns = load_json(ANN_FILE, [])
+    anns = db.get_announcements() if db.DB_ENABLED else load_json(ANN_FILE, [])
     if audience == "students":
         result = [a for a in anns if a["target"] in ("all", "students")]
     elif audience == "teachers":
@@ -372,26 +391,35 @@ def mark_absences():
         return jsonify({"ok": False, "error": "القسم مطلوب."}), 400
 
     roster = {str(s["national_id"]): s for s in STUDENTS if s["class"] == class_name}
-    absences = load_json(ABS_FILE, [])
-    absences = [a for a in absences if not (a["class"] == class_name and a["date"] == date)]
+    clean_records = []
     for rec in records:
         nid = str(rec.get("national_id", ""))
         s = roster.get(nid)
         if s:
-            absences.append({
+            clean_records.append({
                 "national_id": nid, "last_name": s["last_name"], "first_name": s["first_name"],
-                "class": class_name, "date": date,
                 "reason": (rec.get("reason") or "").strip(),
                 "hours": rec.get("hours") or 0,
             })
+
+    if db.DB_ENABLED:
+        db.save_student_absences(class_name, date, clean_records)
+        return jsonify({"ok": True, "count": len(clean_records)})
+
+    absences = load_json(ABS_FILE, [])
+    absences = [a for a in absences if not (a["class"] == class_name and a["date"] == date)]
+    for rec in clean_records:
+        absences.append({**rec, "class": class_name, "date": date})
     save_json(ABS_FILE, absences)
-    return jsonify({"ok": True, "count": len(records)})
+    return jsonify({"ok": True, "count": len(clean_records)})
 
 
 @app.route("/api/absences")
 def get_absences():
     date = request.args.get("date") or today_str()
     class_name = request.args.get("class")
+    if db.DB_ENABLED:
+        return jsonify(db.get_student_absences(date, class_name))
     absences = load_json(ABS_FILE, [])
     absences = [a for a in absences if a["date"] == date]
     if class_name:
@@ -408,25 +436,35 @@ def mark_staff_absences():
     records = data.get("records", [])  # [{employee_id, reason, hours}]
 
     staff_by_id = {str(s["employee_id"]): s for s in STAFF}
-    staff_abs = load_json(STAFF_ABS_FILE, [])
-    staff_abs = [a for a in staff_abs if a["date"] != date]
+    clean_records = []
     for rec in records:
         eid = str(rec.get("employee_id", ""))
         s = staff_by_id.get(eid)
         if s:
-            staff_abs.append({
+            clean_records.append({
                 "employee_id": eid, "last_name": s["last_name"], "first_name": s["first_name"],
-                "role": s["role"], "date": date,
+                "role": s["role"],
                 "reason": (rec.get("reason") or "").strip(),
                 "hours": rec.get("hours") or 0,
             })
+
+    if db.DB_ENABLED:
+        db.save_staff_absences(date, clean_records)
+        return jsonify({"ok": True, "count": len(clean_records)})
+
+    staff_abs = load_json(STAFF_ABS_FILE, [])
+    staff_abs = [a for a in staff_abs if a["date"] != date]
+    for rec in clean_records:
+        staff_abs.append({**rec, "date": date})
     save_json(STAFF_ABS_FILE, staff_abs)
-    return jsonify({"ok": True, "count": len(records)})
+    return jsonify({"ok": True, "count": len(clean_records)})
 
 
 @app.route("/api/staff-absences")
 def get_staff_absences():
     date = request.args.get("date") or today_str()
+    if db.DB_ENABLED:
+        return jsonify(db.get_staff_absences(date))
     staff_abs = [a for a in load_json(STAFF_ABS_FILE, []) if a["date"] == date]
     return jsonify(staff_abs)
 
@@ -435,6 +473,8 @@ def get_staff_absences():
 
 @app.route("/api/guidance/<national_id>", methods=["GET"])
 def get_guidance(national_id):
+    if db.DB_ENABLED:
+        return jsonify(db.get_guidance(str(national_id)))
     guid = load_json(GUID_FILE, {})
     return jsonify(guid.get(str(national_id), []))
 
@@ -447,6 +487,11 @@ def add_guidance(national_id):
     author = data.get("author") or "مستشار التوجيه"
     if not reason:
         return jsonify({"ok": False, "error": "سبب اللقاء مطلوب."}), 400
+
+    if db.DB_ENABLED:
+        db.add_guidance(str(national_id), reason, actions, author)
+        return jsonify({"ok": True})
+
     guid = load_json(GUID_FILE, {})
     guid.setdefault(str(national_id), [])
     guid[str(national_id)].insert(0, {
@@ -462,6 +507,21 @@ def recent_guidance():
     """All interviews for a given date, across all students — for the director's report
     and for the counselor's own overview list."""
     date = request.args.get("date") or today_str()
+
+    if db.DB_ENABLED:
+        rows = db.get_guidance_for_date(date)
+        result = []
+        for n in rows:
+            stu = next((s for s in STUDENTS if str(s["national_id"]) == n["national_id"]), None)
+            result.append({
+                "national_id": n["national_id"],
+                "last_name": stu["last_name"] if stu else "",
+                "first_name": stu["first_name"] if stu else n["national_id"],
+                "class": stu["class"] if stu else "—",
+                "reason": n["reason"], "actions": n["actions"], "author": n["author"], "date": n["date"],
+            })
+        return jsonify(result)
+
     guid = load_json(GUID_FILE, {})
     result = []
     for nid, notes in guid.items():
@@ -484,34 +544,56 @@ def recent_guidance():
 def daily_report():
     date = request.args.get("date") or today_str()
 
-    logs = [l for l in load_json(LOGIN_LOG_FILE, []) if l["date"] == date]
-    students_logged = [l for l in logs if l["role"] == "student"]
-    teachers_logged = [l for l in logs if l["role"] == "teacher"]
-    admins_logged = [l for l in logs if l["role"] == "admin"]
+    if db.DB_ENABLED:
+        logs = db.get_logins_for_date(date)
+        students_logged = [l for l in logs if l["role"] == "student"]
+        teachers_logged = [l for l in logs if l["role"] == "teacher"]
+        admins_logged = [l for l in logs if l["role"] == "admin"]
 
-    absences = [a for a in load_json(ABS_FILE, []) if a["date"] == date]
-    staff_absences = [a for a in load_json(STAFF_ABS_FILE, []) if a["date"] == date]
+        absences = db.get_student_absences(date)
+        staff_absences = db.get_staff_absences(date)
+        docs_today = db.get_documents_for_date(date)
 
-    docs = load_docs()
-    docs_today = []
-    for class_name, items in docs.items():
-        for d in items:
-            if d["date"].startswith(date):
-                docs_today.append({"class": class_name, **d})
+        rows = db.get_guidance_for_date(date)
+        guidance_today = []
+        for n in rows:
+            stu = next((s for s in STUDENTS if str(s["national_id"]) == n["national_id"]), None)
+            guidance_today.append({
+                "national_id": n["national_id"],
+                "last_name": stu["last_name"] if stu else "",
+                "first_name": stu["first_name"] if stu else n["national_id"],
+                "class": stu["class"] if stu else "—",
+                "reason": n["reason"], "actions": n["actions"], "author": n["author"], "date": n["date"],
+            })
+    else:
+        logs = [l for l in load_json(LOGIN_LOG_FILE, []) if l["date"] == date]
+        students_logged = [l for l in logs if l["role"] == "student"]
+        teachers_logged = [l for l in logs if l["role"] == "teacher"]
+        admins_logged = [l for l in logs if l["role"] == "admin"]
 
-    guid = load_json(GUID_FILE, {})
-    guidance_today = []
-    for nid, notes in guid.items():
-        stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
-        for n in notes:
-            if n["date"].startswith(date):
-                guidance_today.append({
-                    "national_id": nid,
-                    "last_name": stu["last_name"] if stu else "",
-                    "first_name": stu["first_name"] if stu else nid,
-                    "class": stu["class"] if stu else "—",
-                    **n,
-                })
+        absences = [a for a in load_json(ABS_FILE, []) if a["date"] == date]
+        staff_absences = [a for a in load_json(STAFF_ABS_FILE, []) if a["date"] == date]
+
+        docs = load_docs()
+        docs_today = []
+        for class_name, items in docs.items():
+            for d in items:
+                if d["date"].startswith(date):
+                    docs_today.append({"class": class_name, **d})
+
+        guid = load_json(GUID_FILE, {})
+        guidance_today = []
+        for nid, notes in guid.items():
+            stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+            for n in notes:
+                if n["date"].startswith(date):
+                    guidance_today.append({
+                        "national_id": nid,
+                        "last_name": stu["last_name"] if stu else "",
+                        "first_name": stu["first_name"] if stu else nid,
+                        "class": stu["class"] if stu else "—",
+                        **n,
+                    })
 
     return jsonify({
         "date": date,
