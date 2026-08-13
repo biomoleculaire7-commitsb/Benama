@@ -8,20 +8,44 @@
 """
 import os
 import ssl
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_ENABLED = bool(DATABASE_URL)
 
-if DB_ENABLED:
-    import pg8000.dbapi
+_DB_HOST = _DB_PORT = _DB_USER = _DB_PASSWORD = _DB_NAME = None
+_INIT_ERROR = None
 
-    _parsed = urlparse(DATABASE_URL)
-    _DB_HOST = _parsed.hostname
-    _DB_PORT = _parsed.port or 5432
-    _DB_USER = _parsed.username
-    _DB_PASSWORD = _parsed.password
-    _DB_NAME = (_parsed.path or "/postgres").lstrip("/")
+if DB_ENABLED:
+    try:
+        import pg8000.dbapi
+
+        _parsed = urlparse(DATABASE_URL.strip())
+        _DB_HOST = _parsed.hostname
+        _DB_PORT = _parsed.port or 5432
+        _DB_USER = unquote(_parsed.username) if _parsed.username else None
+        _DB_PASSWORD = unquote(_parsed.password) if _parsed.password else None
+        _DB_NAME = (_parsed.path or "/postgres").lstrip("/") or "postgres"
+
+        missing = [name for name, val in [
+            ("اسم المستخدم (user)", _DB_USER),
+            ("كلمة المرور (password)", _DB_PASSWORD),
+            ("العنوان (host)", _DB_HOST),
+        ] if not val]
+        if missing:
+            raise ValueError(
+                "DATABASE_URL غير صالح — تعذّر استخراج: " + "، ".join(missing) + ". "
+                "تأكد أن الرابط بصيغة: postgresql://USER:PASSWORD@HOST:PORT/DBNAME "
+                "وأن كلمة المرور استُبدلت فعلياً بدل [YOUR-PASSWORD]، وأنها لا تحتوي "
+                "على مسافات أو أسطر إضافية عند اللصق في Render."
+            )
+    except Exception as e:
+        # Never let a bad DATABASE_URL crash the whole platform at import time.
+        # Fall back to local JSON storage; app.py's own try/except is a second
+        # safety net around init_db() for errors that only surface at connect-time.
+        print(f"[WARNING] DATABASE_URL misconfigured, using JSON files instead: {e}")
+        DB_ENABLED = False
+        _INIT_ERROR = str(e)
 
 
 def get_conn():
