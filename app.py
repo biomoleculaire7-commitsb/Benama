@@ -54,7 +54,13 @@ STUDENTS = SCHOOL_DATA["students"]
 STAFF = SCHOOL_DATA["staff"]
 ASSIGNMENTS = SCHOOL_DATA["assignments"]
 
-db.init_db()  # no-op if DATABASE_URL isn't set — JSON files keep working meanwhile
+try:
+    db.init_db()  # no-op if DATABASE_URL isn't set — JSON files keep working meanwhile
+except Exception as e:
+    # A misconfigured DATABASE_URL must NEVER take the whole platform down.
+    # Fall back to local JSON storage and keep serving the site.
+    print(f"[WARNING] Database connection failed, falling back to JSON files: {e}")
+    db.DB_ENABLED = False
 
 
 def load_docs():
