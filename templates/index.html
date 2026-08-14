@@ -56,6 +56,14 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 .login-error{color:#C0392B;font-size:13px;margin-top:10px;font-weight:700;min-height:18px;}
 .inline-input{width:100%;padding:6px 8px;border:1.5px solid var(--line);border-radius:5px;font-size:12.5px;font-family:'Tajawal';}
 .hours-input{width:60px;padding:6px 8px;border:1.5px solid var(--line);border-radius:5px;font-size:12.5px;text-align:center;}
+.stu-search-wrap{position:relative;margin-bottom:14px;}
+.stu-search-results{display:none;position:absolute;top:100%;right:0;left:0;background:var(--white);border:1.5px solid var(--line);border-radius:8px;z-index:30;max-height:240px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,.12);margin-top:4px;}
+.stu-search-item{padding:10px 14px;cursor:pointer;font-size:13.5px;border-bottom:1px solid var(--line);}
+.stu-search-item:last-child{border-bottom:none;}
+.stu-search-item:hover{background:var(--parchment-2);}
+.stu-search-item .cls-tag{float:left;font-size:11px;color:var(--ochre-deep);font-weight:700;}
+.picked-student{background:var(--sage);border-radius:8px;padding:10px 14px;font-size:13.5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.picked-student button{background:none;border:none;color:#C0392B;cursor:pointer;font-size:16px;}
 </style>
 </head>
 <body>
@@ -125,6 +133,24 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <div id="teacherAnnList"><div class="empty">جارٍ التحميل...</div></div>
       </div>
 
+      <div class="card">
+        <h3>📞 استدعاء تلميذ</h3>
+        <div class="field">
+          <label>ابحث عن التلميذ بالاسم أو اللقب</label>
+          <div id="teacherSummonSearchWrap" class="stu-search-wrap">
+            <input type="text" class="inline-input" id="teacherSummonSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'teacherSummonPicked', 'teacher')">
+            <div class="stu-search-results" id="teacherSummonSearchResults"></div>
+          </div>
+          <div id="teacherSummonPicked"></div>
+        </div>
+        <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="teacherSummonReason" placeholder="مثال: مشكلة سلوكية، متابعة دراسية..."></div>
+        <div style="display:flex;gap:10px">
+          <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="teacherSummonDate"></div>
+          <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="teacherSummonTime"></div>
+        </div>
+        <button class="btn" onclick="submitSummons('teacher')">📞 إرسال الاستدعاء</button>
+      </div>
+
       <div class="card" id="sendCard" style="display:none">
         <h3>📤 إرسال وثيقة إلى تلاميذ القسم</h3>
         <div class="doctype-row">
@@ -147,6 +173,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       <div class="switcher">
         <button class="active" id="stTabDocs" onclick="setStudentTab('docs')">📎 الوثائق المستلمة</button>
         <button id="stTabAnn" onclick="setStudentTab('ann')">📢 الإعلانات</button>
+        <button id="stTabSummons" onclick="setStudentTab('summons')">📞 استدعاءاتي</button>
       </div>
       <div class="card" id="stPanelDocs">
         <h3>📎 الوثائق المستلمة من الأساتذة</h3>
@@ -155,6 +182,10 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       <div class="card" id="stPanelAnn" style="display:none">
         <h3>📢 آخر الإعلانات</h3>
         <div id="studentAnnList"><div class="empty">جارٍ التحميل...</div></div>
+      </div>
+      <div class="card" id="stPanelSummons" style="display:none">
+        <h3>📞 الاستدعاءات الموجَّهة إليّ</h3>
+        <div id="studentSummonsList"><div class="empty">جارٍ التحميل...</div></div>
       </div>
     </div>
 
@@ -187,6 +218,24 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <h3>🧭 مقابلات التوجيه اليوم</h3>
         <div id="guidanceReport"></div>
       </div>
+
+      <div class="card">
+        <h3>📞 استدعاء تلميذ</h3>
+        <div class="field">
+          <label>ابحث عن التلميذ</label>
+          <div id="dirSummonSearchWrap" class="stu-search-wrap">
+            <input type="text" class="inline-input" id="dirSummonSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'dirSummonPicked', 'director')">
+            <div class="stu-search-results" id="dirSummonSearchResults"></div>
+          </div>
+          <div id="dirSummonPicked"></div>
+        </div>
+        <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="dirSummonReason"></div>
+        <div style="display:flex;gap:10px">
+          <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="dirSummonDate"></div>
+          <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="dirSummonTime"></div>
+        </div>
+        <button class="btn" onclick="submitSummons('director')">📞 إرسال الاستدعاء</button>
+      </div>
       <div class="card">
         <h3>📢 نشر إعلان جديد</h3>
         <div class="field"><label>عنوان الإعلان</label><input type="text" id="annTitle"></div>
@@ -211,6 +260,40 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       </div>
 
       <div id="supPanelStudents">
+        <div class="card">
+          <h3>🔎 بحث سريع عن تلميذ</h3>
+          <div class="field">
+            <div id="supQuickSearchWrap" class="stu-search-wrap">
+              <input type="text" class="inline-input" id="supQuickSearchInput" placeholder="اكتب اسم التلميذ للانتقال مباشرة لقسمه..." oninput="handleStudentSearch(this, null, 'supervisor_quick')">
+              <div class="stu-search-results" id="supQuickSearchResults"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>📞 استدعاء تلميذ</h3>
+          <div class="field">
+            <label>ابحث عن التلميذ</label>
+            <div id="supSummonSearchWrap" class="stu-search-wrap">
+              <input type="text" class="inline-input" id="supSummonSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'supSummonPicked', 'supervisor')">
+              <div class="stu-search-results" id="supSummonSearchResults"></div>
+            </div>
+            <div id="supSummonPicked"></div>
+          </div>
+          <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="supSummonReason" placeholder="مثال: غياب متكرر، مشكلة انضباطية..."></div>
+          <div style="display:flex;gap:10px">
+            <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="supSummonDate"></div>
+            <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="supSummonTime"></div>
+          </div>
+          <button class="btn" onclick="submitSummons('supervisor')">📞 إرسال الاستدعاء</button>
+        </div>
+
+        <div class="card">
+          <h3>📋 كل استدعاءات اليوم</h3>
+          <div class="field" style="max-width:220px"><label>التاريخ</label><input type="date" id="summonsListDate" onchange="loadSummonsList()"></div>
+          <div id="summonsListContainer"></div>
+        </div>
+
         <div class="card">
           <h3>تسجيل غياب التلاميذ</h3>
           <div class="field">
@@ -242,6 +325,15 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 
     <!-- ADMIN: counselor (مستشار التوجيه) -->
     <div id="counselorMode" style="display:none">
+      <div class="card">
+        <h3>🔎 بحث سريع عن تلميذ</h3>
+        <div class="field">
+          <div id="counQuickSearchWrap" class="stu-search-wrap">
+            <input type="text" class="inline-input" id="counQuickSearchInput" placeholder="اكتب اسم التلميذ لفتح ملفه مباشرة..." oninput="handleStudentSearch(this, null, 'counselor_quick')">
+            <div class="stu-search-results" id="counQuickSearchResults"></div>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <h3>متابعة التوجيه</h3>
         <div class="field">
@@ -350,6 +442,8 @@ async function enterApp(){
     document.getElementById('teacherMode').style.display = 'block';
     await populateTeacherClasses();
     loadAnnouncementsFor('teachers', 'teacherAnnList');
+    document.getElementById('teacherSummonDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('teacherSummonTime').value = new Date().toTimeString().slice(0,5);
   } else if(currentUser.role==='student'){
     badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${currentUser.class}`;
     document.getElementById('studentMode').style.display = 'block';
@@ -362,13 +456,19 @@ async function enterApp(){
     if(currentUser.admin_role==='director'){
       document.getElementById('directorMode').style.display = 'block';
       document.getElementById('reportDate').value = new Date().toISOString().slice(0,10);
+      document.getElementById('dirSummonDate').value = new Date().toISOString().slice(0,10);
+      document.getElementById('dirSummonTime').value = new Date().toTimeString().slice(0,5);
       loadDailyReport();
     } else if(currentUser.admin_role==='supervisor'){
       document.getElementById('supervisorMode').style.display = 'block';
       const todayStr = new Date().toISOString().slice(0,10);
       document.getElementById('supDate').value = todayStr;
       document.getElementById('supStaffDate').value = todayStr;
+      document.getElementById('supSummonDate').value = todayStr;
+      document.getElementById('supSummonTime').value = new Date().toTimeString().slice(0,5);
+      document.getElementById('summonsListDate').value = todayStr;
       populateClassDropdown('supClassSelect', loadSupervisorRoster);
+      loadSummonsList();
     } else if(currentUser.admin_role==='counselor'){
       document.getElementById('counselorMode').style.display = 'block';
       document.getElementById('counAllDate').value = new Date().toISOString().slice(0,10);
@@ -790,6 +890,122 @@ function setStudentTab(tab){
   document.getElementById('stTabAnn').classList.toggle('active', tab==='ann');
   document.getElementById('stPanelDocs').style.display = tab==='docs' ? 'block':'none';
   document.getElementById('stPanelAnn').style.display = tab==='ann' ? 'block':'none';
+}
+
+function setStudentTab(tab){
+  document.getElementById('stTabDocs').classList.toggle('active', tab==='docs');
+  document.getElementById('stTabAnn').classList.toggle('active', tab==='ann');
+  document.getElementById('stTabSummons').classList.toggle('active', tab==='summons');
+  document.getElementById('stPanelDocs').style.display = tab==='docs' ? 'block':'none';
+  document.getElementById('stPanelAnn').style.display = tab==='ann' ? 'block':'none';
+  document.getElementById('stPanelSummons').style.display = tab==='summons' ? 'block':'none';
+  if(tab==='summons') loadStudentSummons();
+}
+
+async function loadStudentSummons(){
+  const res = await fetch('/api/summons/student/' + currentUser.national_id);
+  const list = await res.json();
+  const container = document.getElementById('studentSummonsList');
+  const roleLabels = {teacher:'أستاذ', supervisor:'الناظر', director:'المدير'};
+  container.innerHTML = list.length ? list.map(s=>`
+    <div class="announcement">
+      <b>${s.reason}</b>
+      <div class="dmeta">من: ${roleLabels[s.requested_by_role]||s.requested_by_role} (${s.requested_by_name}) — ${s.date} الساعة ${s.time}</div>
+    </div>`).join('') : '<div class="empty">لا توجد استدعاءات حالياً.</div>';
+}
+
+// ---- Reusable student search (autocomplete) ----
+let _searchDebounce = null;
+let _pickedStudents = {}; // key: scope, value: student object
+
+async function handleStudentSearch(input, pickedContainerId, scope){
+  clearTimeout(_searchDebounce);
+  const resultsDiv = input.parentElement.querySelector('.stu-search-results');
+  const q = input.value.trim();
+  if(q.length < 2){ resultsDiv.style.display='none'; resultsDiv.innerHTML=''; return; }
+  _searchDebounce = setTimeout(async ()=>{
+    const res = await fetch('/api/students/search?q=' + encodeURIComponent(q));
+    const list = await res.json();
+    if(list.length===0){
+      resultsDiv.innerHTML = '<div class="stu-search-item" style="color:#8a8574">لا نتائج مطابقة</div>';
+    } else {
+      resultsDiv.innerHTML = list.map(s => `<div class="stu-search-item" onclick='pickStudent(${JSON.stringify(s)}, "${pickedContainerId}", "${scope}")'>${s.last_name} ${s.first_name} <span class="cls-tag">${s.class}</span></div>`).join('');
+    }
+    resultsDiv.style.display = 'block';
+  }, 250);
+}
+
+function pickStudent(stu, pickedContainerId, scope){
+  _pickedStudents[scope] = stu;
+  // close the dropdown
+  document.querySelectorAll('.stu-search-results').forEach(d=>{ d.style.display='none'; d.innerHTML=''; });
+  document.querySelectorAll('.stu-search-wrap input').forEach(i=>{ if(i.value) i.value=''; });
+
+  if(scope === 'supervisor_quick'){
+    // jump directly to the student's class in the absence tab
+    const sel = document.getElementById('supClassSelect');
+    sel.value = stu.class;
+    loadSupervisorRoster();
+    showToast(`تم الانتقال إلى قسم ${stu.class} — ${stu.last_name} ${stu.first_name}`);
+    return;
+  }
+  if(scope === 'counselor_quick'){
+    document.getElementById('counClassSelect').value = stu.class;
+    loadCounselorRoster().then(()=> openCounselorStudent(stu));
+    return;
+  }
+  // otherwise: summons picker — show the chosen student as a chip
+  const container = document.getElementById(pickedContainerId);
+  container.innerHTML = `<div class="picked-student">👤 ${stu.last_name} ${stu.first_name} (${stu.class})
+    <button onclick="clearPickedStudent('${pickedContainerId}','${scope}')">✕</button></div>`;
+}
+
+function clearPickedStudent(pickedContainerId, scope){
+  delete _pickedStudents[scope];
+  document.getElementById(pickedContainerId).innerHTML = '';
+}
+
+// ---- Summons ----
+async function submitSummons(scope){
+  const stu = _pickedStudents[scope];
+  if(!stu){ showToast('⚠️ يرجى اختيار التلميذ أولاً من نتائج البحث'); return; }
+  const prefix = scope==='teacher' ? 'teacherSummon' : scope==='supervisor' ? 'supSummon' : 'dirSummon';
+  const reason = document.getElementById(prefix+'Reason').value.trim();
+  const date = document.getElementById(prefix+'Date').value || new Date().toISOString().slice(0,10);
+  const time = document.getElementById(prefix+'Time').value || new Date().toTimeString().slice(0,5);
+  if(!reason){ showToast('⚠️ يرجى كتابة سبب الاستدعاء'); return; }
+
+  const requestedByName = currentUser.role==='teacher'
+    ? `${currentUser.last_name} ${currentUser.first_name}`
+    : `${currentUser.last_name} ${currentUser.first_name}`;
+
+  const res = await fetch('/api/summons', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      national_id: stu.national_id, reason, date, time,
+      requested_by_role: scope, requested_by_name: requestedByName,
+    })
+  });
+  const data = await res.json();
+  if(data.ok){
+    showToast(`✔ تم إرسال الاستدعاء لـ ${stu.last_name} ${stu.first_name}`);
+    document.getElementById(prefix+'Reason').value = '';
+    clearPickedStudent(prefix==='teacherSummon' ? 'teacherSummonPicked' : prefix==='supSummon' ? 'supSummonPicked' : 'dirSummonPicked', scope);
+    if(document.getElementById('summonsListDate')) loadSummonsList();
+  } else {
+    showToast('⚠️ ' + (data.error||'تعذّر الإرسال'));
+  }
+}
+
+async function loadSummonsList(){
+  const date = document.getElementById('summonsListDate').value;
+  const res = await fetch('/api/summons?date=' + date);
+  const list = await res.json();
+  const roleLabels = {teacher:'أستاذ', supervisor:'الناظر', director:'المدير'};
+  const container = document.getElementById('summonsListContainer');
+  container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>من طرف</th><th>التوقيت</th></tr>
+    ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} (${s.requested_by_name})</td><td>${s.time}</td></tr>`).join('')}
+    </table>` : '<div class="empty">لا استدعاءات مسجَّلة لهذا اليوم.</div>';
 }
 
 function showToast(msg){
