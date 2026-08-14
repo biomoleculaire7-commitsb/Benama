@@ -326,6 +326,73 @@ def post_doc(class_name):
     return jsonify({"ok": True})
 
 
+# ---------------- Student search (autocomplete — used by teacher/supervisor/counselor) ----------------
+
+@app.route("/api/students/search")
+def search_students():
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify([])
+    results = [
+        s for s in STUDENTS
+        if q in s["last_name"] or q in s["first_name"] or q in f"{s['last_name']} {s['first_name']}"
+    ]
+    return jsonify(results[:15])
+
+
+# ---------------- Summons (استدعاء تلميذ) ----------------
+
+SUMMONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "summons.json")
+
+
+@app.route("/api/summons", methods=["POST"])
+def create_summons():
+    data = request.get_json(force=True)
+    nid = str(data.get("national_id", ""))
+    reason = (data.get("reason") or "").strip()
+    date = data.get("date") or today_str()
+    time_ = data.get("time") or datetime.now().strftime("%H:%M")
+    requested_by_role = data.get("requested_by_role") or ""
+    requested_by_name = data.get("requested_by_name") or ""
+
+    stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+    if not stu:
+        return jsonify({"ok": False, "error": "التلميذ غير موجود."}), 404
+    if not reason:
+        return jsonify({"ok": False, "error": "سبب الاستدعاء مطلوب."}), 400
+
+    if db.DB_ENABLED:
+        db.add_summons(nid, stu["last_name"], stu["first_name"], stu["class"],
+                        requested_by_role, requested_by_name, reason, date, time_)
+        return jsonify({"ok": True})
+
+    summons = load_json(SUMMONS_FILE, [])
+    summons.insert(0, {
+        "national_id": nid, "last_name": stu["last_name"], "first_name": stu["first_name"], "class": stu["class"],
+        "requested_by_role": requested_by_role, "requested_by_name": requested_by_name,
+        "reason": reason, "date": date, "time": time_,
+    })
+    save_json(SUMMONS_FILE, summons)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/summons")
+def list_summons():
+    date = request.args.get("date") or today_str()
+    if db.DB_ENABLED:
+        return jsonify(db.get_summons_for_date(date))
+    summons = [s for s in load_json(SUMMONS_FILE, []) if s["date"] == date]
+    return jsonify(summons)
+
+
+@app.route("/api/summons/student/<national_id>")
+def student_summons(national_id):
+    if db.DB_ENABLED:
+        return jsonify(db.get_summons_for_student(str(national_id)))
+    summons = [s for s in load_json(SUMMONS_FILE, []) if s["national_id"] == str(national_id)]
+    return jsonify(summons)
+
+
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory(UPLOAD_DIR, filename, as_attachment=False)
