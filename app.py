@@ -357,6 +357,7 @@ def create_summons():
     time_ = data.get("time") or datetime.now().strftime("%H:%M")
     requested_by_role = data.get("requested_by_role") or ""
     requested_by_name = data.get("requested_by_name") or ""
+    on_behalf_of = (data.get("on_behalf_of") or "").strip()
 
     stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
     if not stu:
@@ -366,13 +367,14 @@ def create_summons():
 
     if db.DB_ENABLED:
         db.add_summons(nid, stu["last_name"], stu["first_name"], stu["class"],
-                        requested_by_role, requested_by_name, reason, date, time_)
+                        requested_by_role, requested_by_name, on_behalf_of, reason, date, time_)
         return jsonify({"ok": True})
 
     summons = load_json(SUMMONS_FILE, [])
     summons.insert(0, {
         "national_id": nid, "last_name": stu["last_name"], "first_name": stu["first_name"], "class": stu["class"],
         "requested_by_role": requested_by_role, "requested_by_name": requested_by_name,
+        "on_behalf_of": on_behalf_of,
         "reason": reason, "date": date, "time": time_,
     })
     save_json(SUMMONS_FILE, summons)
