@@ -133,24 +133,6 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <div id="teacherAnnList"><div class="empty">جارٍ التحميل...</div></div>
       </div>
 
-      <div class="card">
-        <h3>📞 استدعاء تلميذ</h3>
-        <div class="field">
-          <label>ابحث عن التلميذ بالاسم أو اللقب</label>
-          <div id="teacherSummonSearchWrap" class="stu-search-wrap">
-            <input type="text" class="inline-input" id="teacherSummonSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'teacherSummonPicked', 'teacher')">
-            <div class="stu-search-results" id="teacherSummonSearchResults"></div>
-          </div>
-          <div id="teacherSummonPicked"></div>
-        </div>
-        <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="teacherSummonReason" placeholder="مثال: مشكلة سلوكية، متابعة دراسية..."></div>
-        <div style="display:flex;gap:10px">
-          <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="teacherSummonDate"></div>
-          <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="teacherSummonTime"></div>
-        </div>
-        <button class="btn" onclick="submitSummons('teacher')">📞 إرسال الاستدعاء</button>
-      </div>
-
       <div class="card" id="sendCard" style="display:none">
         <h3>📤 إرسال وثيقة إلى تلاميذ القسم</h3>
         <div class="doctype-row">
@@ -355,6 +337,24 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <div class="field" style="max-width:220px"><label>التاريخ</label><input type="date" id="counAllDate" onchange="loadAllGuidance()"></div>
         <div id="counAllList"></div>
       </div>
+
+      <div class="card">
+        <h3>📞 استدعاء تلميذ</h3>
+        <div class="field">
+          <label>ابحث عن التلميذ</label>
+          <div id="counSummonSearchWrap" class="stu-search-wrap">
+            <input type="text" class="inline-input" id="counSummonSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'counSummonPicked', 'counselor')">
+            <div class="stu-search-results" id="counSummonSearchResults"></div>
+          </div>
+          <div id="counSummonPicked"></div>
+        </div>
+        <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="counSummonReason"></div>
+        <div style="display:flex;gap:10px">
+          <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="counSummonDate"></div>
+          <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="counSummonTime"></div>
+        </div>
+        <button class="btn" onclick="submitSummons('counselor')">📞 إرسال الاستدعاء</button>
+      </div>
     </div>
   </div>
 </div>
@@ -442,8 +442,6 @@ async function enterApp(){
     document.getElementById('teacherMode').style.display = 'block';
     await populateTeacherClasses();
     loadAnnouncementsFor('teachers', 'teacherAnnList');
-    document.getElementById('teacherSummonDate').value = new Date().toISOString().slice(0,10);
-    document.getElementById('teacherSummonTime').value = new Date().toTimeString().slice(0,5);
   } else if(currentUser.role==='student'){
     badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${currentUser.class}`;
     document.getElementById('studentMode').style.display = 'block';
@@ -472,6 +470,8 @@ async function enterApp(){
     } else if(currentUser.admin_role==='counselor'){
       document.getElementById('counselorMode').style.display = 'block';
       document.getElementById('counAllDate').value = new Date().toISOString().slice(0,10);
+      document.getElementById('counSummonDate').value = new Date().toISOString().slice(0,10);
+      document.getElementById('counSummonTime').value = new Date().toTimeString().slice(0,5);
       populateClassDropdown('counClassSelect', loadCounselorRoster);
       loadAllGuidance();
     }
@@ -906,7 +906,7 @@ async function loadStudentSummons(){
   const res = await fetch('/api/summons/student/' + currentUser.national_id);
   const list = await res.json();
   const container = document.getElementById('studentSummonsList');
-  const roleLabels = {teacher:'أستاذ', supervisor:'الناظر', director:'المدير'};
+  const roleLabels = {supervisor:'الناظر', director:'المدير', counselor:'مستشار التوجيه'};
   container.innerHTML = list.length ? list.map(s=>`
     <div class="announcement">
       <b>${s.reason}</b>
@@ -954,10 +954,19 @@ function pickStudent(stu, pickedContainerId, scope){
     loadCounselorRoster().then(()=> openCounselorStudent(stu));
     return;
   }
-  // otherwise: summons picker — show the chosen student as a chip
+  // otherwise: summons picker — show the chosen student as a chip + parent WhatsApp
   const container = document.getElementById(pickedContainerId);
-  container.innerHTML = `<div class="picked-student">👤 ${stu.last_name} ${stu.first_name} (${stu.class})
-    <button onclick="clearPickedStudent('${pickedContainerId}','${scope}')">✕</button></div>`;
+  container.innerHTML = `
+    <div class="picked-student">👤 ${stu.last_name} ${stu.first_name} (${stu.class})
+      <button onclick="clearPickedStudent('${pickedContainerId}','${scope}')">✕</button>
+    </div>
+    <div class="field" style="margin-top:8px">
+      <label>هاتف ولي الأمر (لإرسال الاستدعاء عبر واتساب)</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="inline-input" id="${pickedContainerId}_phone" value="${stu.parent_phone||''}" placeholder="0XXXXXXXXX" onchange="saveParentPhone('${stu.national_id}', this.value)">
+        <button class="small-btn" style="background:#25D366;white-space:nowrap" onclick="sendSummonsWhatsApp('${scope}','${pickedContainerId}')">📱 واتساب</button>
+      </div>
+    </div>`;
 }
 
 function clearPickedStudent(pickedContainerId, scope){
@@ -966,18 +975,37 @@ function clearPickedStudent(pickedContainerId, scope){
 }
 
 // ---- Summons ----
+const SUMMON_PREFIX = {supervisor:'supSummon', director:'dirSummon', counselor:'counSummon'};
+
+function sendSummonsWhatsApp(scope, pickedContainerId){
+  const stu = _pickedStudents[scope];
+  if(!stu){ showToast('⚠️ يرجى اختيار التلميذ أولاً'); return; }
+  const phoneInput = document.getElementById(pickedContainerId+'_phone');
+  const phone = phoneInput ? phoneInput.value : stu.parent_phone;
+  if(!phone){ showToast('⚠️ يرجى كتابة رقم هاتف الولي أولاً'); return; }
+
+  const prefix = SUMMON_PREFIX[scope];
+  const reason = document.getElementById(prefix+'Reason').value.trim();
+  const date = document.getElementById(prefix+'Date').value || new Date().toISOString().slice(0,10);
+  const time = document.getElementById(prefix+'Time').value || new Date().toTimeString().slice(0,5);
+  const roleLabels = {supervisor:'الناظر', director:'المدير', counselor:'مستشار التوجيه'};
+  const senderLabel = roleLabels[scope] || scope;
+
+  const msg = `متوسطة الشهيد بن نعمة مصطفى: نرجو حضوركم لاستدعاء بخصوص ابنكم/ابنتكم ${stu.last_name} ${stu.first_name} (${stu.class})، بتاريخ ${date} الساعة ${time}.${reason ? ' السبب: '+reason+'.' : ''} — من طرف: ${senderLabel}.`;
+  const waNumber = formatAlgerianWhatsApp(phone);
+  window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 async function submitSummons(scope){
   const stu = _pickedStudents[scope];
   if(!stu){ showToast('⚠️ يرجى اختيار التلميذ أولاً من نتائج البحث'); return; }
-  const prefix = scope==='teacher' ? 'teacherSummon' : scope==='supervisor' ? 'supSummon' : 'dirSummon';
+  const prefix = SUMMON_PREFIX[scope];
   const reason = document.getElementById(prefix+'Reason').value.trim();
   const date = document.getElementById(prefix+'Date').value || new Date().toISOString().slice(0,10);
   const time = document.getElementById(prefix+'Time').value || new Date().toTimeString().slice(0,5);
   if(!reason){ showToast('⚠️ يرجى كتابة سبب الاستدعاء'); return; }
 
-  const requestedByName = currentUser.role==='teacher'
-    ? `${currentUser.last_name} ${currentUser.first_name}`
-    : `${currentUser.last_name} ${currentUser.first_name}`;
+  const requestedByName = `${currentUser.last_name} ${currentUser.first_name}`;
 
   const res = await fetch('/api/summons', {
     method:'POST', headers:{'Content-Type':'application/json'},
@@ -990,7 +1018,7 @@ async function submitSummons(scope){
   if(data.ok){
     showToast(`✔ تم إرسال الاستدعاء لـ ${stu.last_name} ${stu.first_name}`);
     document.getElementById(prefix+'Reason').value = '';
-    clearPickedStudent(prefix==='teacherSummon' ? 'teacherSummonPicked' : prefix==='supSummon' ? 'supSummonPicked' : 'dirSummonPicked', scope);
+    clearPickedStudent(prefix+'Picked', scope);
     if(document.getElementById('summonsListDate')) loadSummonsList();
   } else {
     showToast('⚠️ ' + (data.error||'تعذّر الإرسال'));
@@ -1001,10 +1029,10 @@ async function loadSummonsList(){
   const date = document.getElementById('summonsListDate').value;
   const res = await fetch('/api/summons?date=' + date);
   const list = await res.json();
-  const roleLabels = {teacher:'أستاذ', supervisor:'الناظر', director:'المدير'};
+  const roleLabels = {supervisor:'الناظر', director:'المدير', counselor:'مستشار التوجيه'};
   const container = document.getElementById('summonsListContainer');
-  container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>من طرف</th><th>التوقيت</th></tr>
-    ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} (${s.requested_by_name})</td><td>${s.time}</td></tr>`).join('')}
+  container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>من طلب الاستدعاء</th><th>التوقيت</th></tr>
+    ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} — ${s.requested_by_name}</td><td>${s.time}</td></tr>`).join('')}
     </table>` : '<div class="empty">لا استدعاءات مسجَّلة لهذا اليوم.</div>';
 }
 
