@@ -148,11 +148,15 @@ def init_db():
             class_name TEXT,
             requested_by_role TEXT,
             requested_by_name TEXT,
+            on_behalf_of TEXT,
             reason TEXT,
             summon_date DATE NOT NULL,
             summon_time TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         );
+    """)
+    cur.execute("""
+        ALTER TABLE summons ADD COLUMN IF NOT EXISTS on_behalf_of TEXT;
     """)
     conn.commit()
     cur.close()
@@ -333,19 +337,19 @@ def get_logins_for_date(date):
 
 # ---------------- Summons (استدعاء تلميذ) ----------------
 
-def add_summons(national_id, last_name, first_name, class_name, requested_by_role, requested_by_name, reason, date, time):
+def add_summons(national_id, last_name, first_name, class_name, requested_by_role, requested_by_name, on_behalf_of, reason, date, time):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("""INSERT INTO summons (national_id, last_name, first_name, class_name,
-                    requested_by_role, requested_by_name, reason, summon_date, summon_time)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (national_id, last_name, first_name, class_name, requested_by_role, requested_by_name, reason, date, time))
+                    requested_by_role, requested_by_name, on_behalf_of, reason, summon_date, summon_time)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (national_id, last_name, first_name, class_name, requested_by_role, requested_by_name, on_behalf_of, reason, date, time))
     conn.commit(); cur.close(); conn.close()
 
 
 def get_summons_for_date(date):
     conn = get_conn(); cur = conn.cursor()
     cur.execute("""SELECT national_id, last_name, first_name, class_name AS "class",
-                    requested_by_role, requested_by_name, reason,
+                    requested_by_role, requested_by_name, on_behalf_of, reason,
                     to_char(summon_date,'YYYY-MM-DD') AS date, summon_time AS time
                     FROM summons WHERE summon_date=%s ORDER BY created_at DESC""", (date,))
     rows = _dictify(cur)
@@ -355,7 +359,7 @@ def get_summons_for_date(date):
 
 def get_summons_for_student(national_id):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("""SELECT requested_by_role, requested_by_name, reason,
+    cur.execute("""SELECT requested_by_role, requested_by_name, on_behalf_of, reason,
                     to_char(summon_date,'YYYY-MM-DD') AS date, summon_time AS time
                     FROM summons WHERE national_id=%s ORDER BY created_at DESC""", (national_id,))
     rows = _dictify(cur)
