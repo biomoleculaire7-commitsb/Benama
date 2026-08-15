@@ -212,6 +212,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
           <div id="dirSummonPicked"></div>
         </div>
         <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="dirSummonReason"></div>
+        <div class="field"><label>بطلب من (اختياري)</label><input type="text" class="inline-input" id="dirSummonBehalf" placeholder="مثال: الأستاذ فلان، ناظر المؤسسة، بمبادرة شخصية..."></div>
         <div style="display:flex;gap:10px">
           <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="dirSummonDate"></div>
           <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="dirSummonTime"></div>
@@ -263,6 +264,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
             <div id="supSummonPicked"></div>
           </div>
           <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="supSummonReason" placeholder="مثال: غياب متكرر، مشكلة انضباطية..."></div>
+          <div class="field"><label>بطلب من (اختياري)</label><input type="text" class="inline-input" id="supSummonBehalf" placeholder="مثال: الأستاذ فلان، أو اترك فارغاً إن كان بمبادرة الناظر"></div>
           <div style="display:flex;gap:10px">
             <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="supSummonDate"></div>
             <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="supSummonTime"></div>
@@ -349,6 +351,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
           <div id="counSummonPicked"></div>
         </div>
         <div class="field"><label>سبب الاستدعاء</label><input type="text" class="inline-input" id="counSummonReason"></div>
+        <div class="field"><label>بطلب من (اختياري)</label><input type="text" class="inline-input" id="counSummonBehalf" placeholder="مثال: الأستاذ فلان، ولي أمر طلب مقابلة..."></div>
         <div style="display:flex;gap:10px">
           <div class="field" style="flex:1"><label>اليوم</label><input type="date" class="inline-input" id="counSummonDate"></div>
           <div class="field" style="flex:1"><label>التوقيت</label><input type="time" class="inline-input" id="counSummonTime"></div>
@@ -910,7 +913,8 @@ async function loadStudentSummons(){
   container.innerHTML = list.length ? list.map(s=>`
     <div class="announcement">
       <b>${s.reason}</b>
-      <div class="dmeta">من: ${roleLabels[s.requested_by_role]||s.requested_by_role} (${s.requested_by_name}) — ${s.date} الساعة ${s.time}</div>
+      ${s.on_behalf_of ? `<div style="font-size:12.5px;margin-top:2px">بطلب من: ${s.on_behalf_of}</div>` : ''}
+      <div class="dmeta">أرسله: ${roleLabels[s.requested_by_role]||s.requested_by_role} (${s.requested_by_name}) — ${s.date} الساعة ${s.time}</div>
     </div>`).join('') : '<div class="empty">لا توجد استدعاءات حالياً.</div>';
 }
 
@@ -986,12 +990,13 @@ function sendSummonsWhatsApp(scope, pickedContainerId){
 
   const prefix = SUMMON_PREFIX[scope];
   const reason = document.getElementById(prefix+'Reason').value.trim();
+  const behalf = document.getElementById(prefix+'Behalf').value.trim();
   const date = document.getElementById(prefix+'Date').value || new Date().toISOString().slice(0,10);
   const time = document.getElementById(prefix+'Time').value || new Date().toTimeString().slice(0,5);
   const roleLabels = {supervisor:'الناظر', director:'المدير', counselor:'مستشار التوجيه'};
   const senderLabel = roleLabels[scope] || scope;
 
-  const msg = `متوسطة الشهيد بن نعمة مصطفى: نرجو حضوركم لاستدعاء بخصوص ابنكم/ابنتكم ${stu.last_name} ${stu.first_name} (${stu.class})، بتاريخ ${date} الساعة ${time}.${reason ? ' السبب: '+reason+'.' : ''} — من طرف: ${senderLabel}.`;
+  const msg = `متوسطة الشهيد بن نعمة مصطفى: نرجو حضوركم لاستدعاء بخصوص ابنكم/ابنتكم ${stu.last_name} ${stu.first_name} (${stu.class})، بتاريخ ${date} الساعة ${time}.${reason ? ' السبب: '+reason+'.' : ''}${behalf ? ' بطلب من: '+behalf+'.' : ''} — أرسله: ${senderLabel}.`;
   const waNumber = formatAlgerianWhatsApp(phone);
   window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -1001,6 +1006,7 @@ async function submitSummons(scope){
   if(!stu){ showToast('⚠️ يرجى اختيار التلميذ أولاً من نتائج البحث'); return; }
   const prefix = SUMMON_PREFIX[scope];
   const reason = document.getElementById(prefix+'Reason').value.trim();
+  const behalf = document.getElementById(prefix+'Behalf').value.trim();
   const date = document.getElementById(prefix+'Date').value || new Date().toISOString().slice(0,10);
   const time = document.getElementById(prefix+'Time').value || new Date().toTimeString().slice(0,5);
   if(!reason){ showToast('⚠️ يرجى كتابة سبب الاستدعاء'); return; }
@@ -1012,12 +1018,14 @@ async function submitSummons(scope){
     body: JSON.stringify({
       national_id: stu.national_id, reason, date, time,
       requested_by_role: scope, requested_by_name: requestedByName,
+      on_behalf_of: behalf,
     })
   });
   const data = await res.json();
   if(data.ok){
     showToast(`✔ تم إرسال الاستدعاء لـ ${stu.last_name} ${stu.first_name}`);
     document.getElementById(prefix+'Reason').value = '';
+    document.getElementById(prefix+'Behalf').value = '';
     clearPickedStudent(prefix+'Picked', scope);
     if(document.getElementById('summonsListDate')) loadSummonsList();
   } else {
@@ -1031,8 +1039,8 @@ async function loadSummonsList(){
   const list = await res.json();
   const roleLabels = {supervisor:'الناظر', director:'المدير', counselor:'مستشار التوجيه'};
   const container = document.getElementById('summonsListContainer');
-  container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>من طلب الاستدعاء</th><th>التوقيت</th></tr>
-    ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} — ${s.requested_by_name}</td><td>${s.time}</td></tr>`).join('')}
+  container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>بطلب من</th><th>أرسله</th><th>التوقيت</th></tr>
+    ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${s.on_behalf_of||'—'}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} — ${s.requested_by_name}</td><td>${s.time}</td></tr>`).join('')}
     </table>` : '<div class="empty">لا استدعاءات مسجَّلة لهذا اليوم.</div>';
 }
 
