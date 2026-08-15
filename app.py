@@ -334,9 +334,12 @@ def search_students():
     if len(q) < 2:
         return jsonify([])
     results = [
-        s for s in STUDENTS
+        dict(s) for s in STUDENTS
         if q in s["last_name"] or q in s["first_name"] or q in f"{s['last_name']} {s['first_name']}"
     ]
+    phones = db.get_parent_phones_bulk() if db.DB_ENABLED else load_json(PARENT_PHONES_FILE, {})
+    for r in results:
+        r["parent_phone"] = phones.get(str(r["national_id"]), "")
     return jsonify(results[:15])
 
 
