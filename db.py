@@ -85,8 +85,16 @@ def init_db():
             body TEXT,
             target TEXT,
             author TEXT,
+            file_url TEXT,
+            file_name TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         );
+    """)
+    cur.execute("""
+        ALTER TABLE announcements ADD COLUMN IF NOT EXISTS file_url TEXT;
+    """)
+    cur.execute("""
+        ALTER TABLE announcements ADD COLUMN IF NOT EXISTS file_name TEXT;
     """)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS absences (
@@ -202,17 +210,19 @@ def add_document(class_name, title, body, doctype, teacher, subject, file_url, f
 
 def get_announcements():
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("""SELECT title, body, target, author, to_char(created_at,'YYYY-MM-DD HH24:MI') AS date
+    cur.execute("""SELECT title, body, target, author, file_url AS "fileUrl",
+                    file_name AS "fileName", to_char(created_at,'YYYY-MM-DD HH24:MI') AS date
                     FROM announcements ORDER BY created_at DESC""")
     rows = _dictify(cur)
     cur.close(); conn.close()
     return rows
 
 
-def add_announcement(title, body, target, author):
+def add_announcement(title, body, target, author, file_url=None, file_name=None):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("""INSERT INTO announcements (title, body, target, author) VALUES (%s,%s,%s,%s)""",
-                (title, body, target, author))
+    cur.execute("""INSERT INTO announcements (title, body, target, author, file_url, file_name)
+                    VALUES (%s,%s,%s,%s,%s,%s)""",
+                (title, body, target, author, file_url, file_name))
     conn.commit(); cur.close(); conn.close()
 
 
