@@ -221,22 +221,89 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       </div>
       <div class="card">
         <h3>📢 نشر إعلان جديد</h3>
-        <div class="field"><label>عنوان الإعلان</label><input type="text" id="annTitle"></div>
-        <div class="field"><label>نص الإعلان</label><textarea id="annBody"></textarea></div>
+        <div class="field"><label>عنوان الإعلان</label><input type="text" class="inline-input" id="annTitle"></div>
+        <div class="field"><label>نص الإعلان (اختياري إن أرفقت وثيقة)</label><textarea id="annBody"></textarea></div>
+        <div class="field">
+          <label>إرفاق وثيقة (Word أو PDF، اختياري)</label>
+          <input type="file" id="annFile" accept=".pdf,.doc,.docx">
+        </div>
         <div class="field">
           <label>الجهة المستهدفة</label>
-          <select id="annTarget">
-            <option value="all">الجميع (تلاميذ + أساتذة)</option>
-            <option value="students">التلاميذ فقط</option>
-            <option value="teachers">الأساتذة فقط</option>
+          <select id="annAudience" class="inline-input" onchange="onAnnAudienceChange()">
+            <optgroup label="الجميع">
+              <option value="all">كل المؤسسة (تلاميذ + طاقم)</option>
+            </optgroup>
+            <optgroup label="التلاميذ">
+              <option value="students:all">كل التلاميذ</option>
+              <option value="students:level">مستوى دراسي محدد</option>
+              <option value="students:class">قسم محدد</option>
+              <option value="students:one">تلميذ محدد</option>
+            </optgroup>
+            <optgroup label="الأساتذة">
+              <option value="teachers:all">كل الأساتذة</option>
+              <option value="teachers:one">أستاذ محدد</option>
+            </optgroup>
+            <optgroup label="المشرفون">
+              <option value="monitors:all">كل المشرفين</option>
+              <option value="monitors:one">مشرف محدد</option>
+            </optgroup>
+            <optgroup label="الإدارة">
+              <option value="role:supervisor">الناظر</option>
+              <option value="role:counselor">مستشار التوجيه</option>
+              <option value="role:bursar">المقتصدة</option>
+            </optgroup>
           </select>
         </div>
-        <button class="btn" onclick="createAnnouncement()">نشر الإعلان</button>
+
+        <div class="field ann-sub-target" id="annSubLevel" style="display:none">
+          <label>اختر المستوى</label>
+          <select id="annSubLevelSelect" class="inline-input">
+            <option value="1">السنة الأولى متوسط</option>
+            <option value="2">السنة الثانية متوسط</option>
+            <option value="3">السنة الثالثة متوسط</option>
+            <option value="4">السنة الرابعة متوسط</option>
+          </select>
+        </div>
+
+        <div class="field ann-sub-target" id="annSubClass" style="display:none">
+          <label>اختر القسم</label>
+          <select id="annSubClassSelect" class="inline-input">
+            <option>1م1</option><option>1م2</option><option>1م3</option>
+            <option>2م1</option><option>2م2</option><option>2م3</option>
+            <option>3م1</option><option>3م2</option>
+            <option>4م1</option><option>4م2</option><option>4م3</option>
+          </select>
+        </div>
+
+        <div class="field ann-sub-target" id="annSubStudent" style="display:none">
+          <label>ابحث عن التلميذ</label>
+          <div class="stu-search-wrap">
+            <input type="text" class="inline-input" id="annSubStudentSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'annSubStudentPicked', 'announcement')">
+            <div class="stu-search-results" id="annSubStudentSearchResults"></div>
+          </div>
+          <div id="annSubStudentPicked"></div>
+        </div>
+
+        <div class="field ann-sub-target" id="annSubTeacher" style="display:none">
+          <label>اختر الأستاذ</label>
+          <select id="annSubTeacherSelect" class="inline-input"></select>
+        </div>
+
+        <div class="field ann-sub-target" id="annSubMonitor" style="display:none">
+          <label>اختر المشرف</label>
+          <select id="annSubMonitorSelect" class="inline-input"></select>
+        </div>
+
+        <button class="btn" onclick="createAnnouncement()">📢 نشر الإعلان</button>
       </div>
     </div>
 
     <!-- ADMIN: supervisor (الناظر) -->
     <div id="supervisorMode" style="display:none">
+      <div class="card">
+        <h3>📢 الإعلانات الموجَّهة إليّ</h3>
+        <div id="supervisorAnnList"><div class="empty">جارٍ التحميل...</div></div>
+      </div>
       <div class="switcher">
         <button class="active" id="supTabStudents" onclick="setSupTab('students')">🎒 غياب التلاميذ</button>
         <button id="supTabStaff" onclick="setSupTab('staff')">👥 غياب الأساتذة والمشرفين</button>
@@ -309,6 +376,10 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 
     <!-- ADMIN: counselor (مستشار التوجيه) -->
     <div id="counselorMode" style="display:none">
+      <div class="card">
+        <h3>📢 الإعلانات الموجَّهة إليّ</h3>
+        <div id="counselorAnnList"><div class="empty">جارٍ التحميل...</div></div>
+      </div>
       <div class="card">
         <h3>🔎 بحث سريع عن تلميذ</h3>
         <div class="field">
@@ -450,7 +521,7 @@ async function enterApp(){
     document.getElementById('studentMode').style.display = 'block';
     document.getElementById('studentInfo').innerHTML = `<h3>مرحباً ${currentUser.first_name}</h3><div class="hint">القسم: <b>${currentUser.class}</b> — الجنس: ${currentUser.gender}</div>`;
     refreshStudentDocs();
-    loadAnnouncementsFor(currentUser.class, 'studentAnnList');
+    loadAnnouncementsFor('students', 'studentAnnList');
   } else if(currentUser.role==='admin'){
     const roleLabels = {director:'المدير', supervisor:'الناظر', counselor:'مستشار التوجيه'};
     badge.innerText = `${currentUser.last_name} ${currentUser.first_name} — ${roleLabels[currentUser.admin_role]}`;
@@ -459,9 +530,11 @@ async function enterApp(){
       document.getElementById('reportDate').value = new Date().toISOString().slice(0,10);
       document.getElementById('dirSummonDate').value = new Date().toISOString().slice(0,10);
       document.getElementById('dirSummonTime').value = new Date().toTimeString().slice(0,5);
+      populateAnnouncementDropdowns();
       loadDailyReport();
     } else if(currentUser.admin_role==='supervisor'){
       document.getElementById('supervisorMode').style.display = 'block';
+      loadAnnouncementsFor('supervisor', 'supervisorAnnList');
       const todayStr = new Date().toISOString().slice(0,10);
       document.getElementById('supDate').value = todayStr;
       document.getElementById('supStaffDate').value = todayStr;
@@ -472,6 +545,7 @@ async function enterApp(){
       loadSummonsList();
     } else if(currentUser.admin_role==='counselor'){
       document.getElementById('counselorMode').style.display = 'block';
+      loadAnnouncementsFor('counselor', 'counselorAnnList');
       document.getElementById('counAllDate').value = new Date().toISOString().slice(0,10);
       document.getElementById('counSummonDate').value = new Date().toISOString().slice(0,10);
       document.getElementById('counSummonTime').value = new Date().toTimeString().slice(0,5);
@@ -502,8 +576,16 @@ async function populateClassDropdown(selectId, onReady){
 }
 
 // ---- Announcements ----
-async function loadAnnouncementsFor(audience, containerId){
-  const res = await fetch('/api/announcements/for/' + encodeURIComponent(audience));
+async function loadAnnouncementsFor(kind, containerId){
+  let url;
+  if(kind === 'teachers'){
+    url = '/api/announcements/for/teachers?employee_id=' + encodeURIComponent(currentUser.employee_id);
+  } else if(kind === 'students'){
+    url = `/api/announcements/for/students?national_id=${encodeURIComponent(currentUser.national_id)}&class=${encodeURIComponent(currentUser.class)}`;
+  } else {
+    url = '/api/announcements/for/role/' + encodeURIComponent(kind); // 'supervisor' | 'counselor'
+  }
+  const res = await fetch(url);
   const anns = await res.json();
   const container = document.getElementById(containerId);
   if(anns.length===0){
@@ -514,24 +596,76 @@ async function loadAnnouncementsFor(audience, containerId){
     <div class="announcement">
       <b>${a.title}</b>
       ${a.body ? `<div style="margin-top:4px">${a.body}</div>` : ''}
+      ${a.fileUrl ? `<a href="${a.fileUrl}" download="${a.fileName}" class="file-chip">📎 تحميل المرفق — ${a.fileName}</a>` : ''}
       <div class="dmeta">${a.author} — ${a.date}</div>
     </div>`).join('');
+}
+
+// ---- Director: rich announcement targeting ----
+function onAnnAudienceChange(){
+  const audience = document.getElementById('annAudience').value;
+  document.querySelectorAll('.ann-sub-target').forEach(el => el.style.display = 'none');
+  const map = {
+    'students:class': 'annSubClass',
+    'students:level': 'annSubLevel',
+    'students:one': 'annSubStudent',
+    'teachers:one': 'annSubTeacher',
+    'monitors:one': 'annSubMonitor',
+  };
+  if(map[audience]) document.getElementById(map[audience]).style.display = 'block';
+}
+
+function buildAnnouncementTarget(){
+  const audience = document.getElementById('annAudience').value;
+  if(audience === 'students:class') return 'students:class:' + document.getElementById('annSubClassSelect').value;
+  if(audience === 'students:level') return 'students:level:' + document.getElementById('annSubLevelSelect').value;
+  if(audience === 'students:one'){
+    const stu = _pickedStudents['announcement'];
+    if(!stu) return null;
+    return 'students:one:' + stu.national_id;
+  }
+  if(audience === 'teachers:one') return 'teachers:one:' + document.getElementById('annSubTeacherSelect').value;
+  if(audience === 'monitors:one') return 'monitors:one:' + document.getElementById('annSubMonitorSelect').value;
+  return audience; // 'all' | 'students:all' | 'teachers:all' | 'monitors:all' | 'role:supervisor' | 'role:counselor' | 'role:bursar'
+}
+
+async function populateAnnouncementDropdowns(){
+  const res = await fetch('/api/staff/all');
+  const staff = await res.json();
+  const teachers = staff.filter(s => (s.role||'').includes('أستاذ'));
+  const monitors = staff.filter(s => (s.role||'').includes('مشرف'));
+
+  const tSel = document.getElementById('annSubTeacherSelect');
+  tSel.innerHTML = teachers.map(t=>`<option value="${t.employee_id}">${t.last_name} ${t.first_name} — ${t.subject||''}</option>`).join('');
+
+  const mSel = document.getElementById('annSubMonitorSelect');
+  mSel.innerHTML = monitors.map(m=>`<option value="${m.employee_id}">${m.last_name} ${m.first_name}</option>`).join('');
 }
 
 async function createAnnouncement(){
   const title = document.getElementById('annTitle').value.trim();
   const body = document.getElementById('annBody').value.trim();
-  const target = document.getElementById('annTarget').value;
   if(!title){ showToast('⚠️ عنوان الإعلان مطلوب'); return; }
-  const res = await fetch('/api/announcements', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({title, body, target, author: `${currentUser.last_name} ${currentUser.first_name}`})
-  });
+
+  const target = buildAnnouncementTarget();
+  if(!target){ showToast('⚠️ يرجى اختيار التلميذ المعني أولاً من نتائج البحث'); return; }
+
+  const fd = new FormData();
+  fd.append('title', title);
+  fd.append('body', body);
+  fd.append('target', target);
+  fd.append('author', `${currentUser.last_name} ${currentUser.first_name}`);
+  const fileInput = document.getElementById('annFile');
+  if(fileInput.files[0]) fd.append('file', fileInput.files[0]);
+
+  const res = await fetch('/api/announcements', { method:'POST', body: fd });
   const data = await res.json();
   if(data.ok){
     showToast('✔ تم نشر الإعلان');
     document.getElementById('annTitle').value='';
     document.getElementById('annBody').value='';
+    fileInput.value='';
+    clearPickedStudent('annSubStudentPicked','announcement');
   } else {
     showToast('⚠️ ' + (data.error||'تعذّر النشر'));
   }
