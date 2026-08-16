@@ -414,39 +414,98 @@ def list_announcements():
 
 @app.route("/api/announcements", methods=["POST"])
 def create_announcement():
-    data = request.get_json(force=True)
-    title = (data.get("title") or "").strip()
-    body = (data.get("body") or "").strip()
-    target = data.get("target") or "all"  # 'all' | 'students' | 'teachers' | 'class:<name>'
-    author = data.get("author") or "إدارة المؤسسة"
+    title = (request.form.get("title") or "").strip()
+    body = (request.form.get("body") or "").strip()
+    target = request.form.get("target") or "all"
+    author = request.form.get("author") or "إدارة المؤسسة"
     if not title:
         return jsonify({"ok": False, "error": "عنوان الإعلان مطلوب."}), 400
+
+    file_url = None
+    file_name = None
+    file_obj = request.files.get("file")
+    if file_obj and file_obj.filename:
+        safe_name = f"{int(time.time()*1000)}_{file_obj.filename}"
+        file_obj.save(os.path.join(UPLOAD_DIR, safe_name))
+        file_name = file_obj.filename
+        file_url = f"/uploads/{safe_name}"
+
     if db.DB_ENABLED:
-        db.add_announcement(title, body, target, author)
+        db.add_announcement(title, body, target, author, file_url, file_name)
         return jsonify({"ok": True})
+
     anns = load_json(ANN_FILE, [])
     anns.insert(0, {
         "title": title, "body": body, "target": target, "author": author,
+        "fileUrl": file_url, "fileName": file_name,
         "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
     })
     save_json(ANN_FILE, anns)
     return jsonify({"ok": True})
 
 
-@app.route("/api/announcements/for/<audience>")
-def announcements_for(audience):
-    """audience = 'students' | 'teachers' | a class name for a student's own class"""
+def _announcement_matches(target, **ctx):
+    if target == "all":
+        return True
+    kind = ctx.get("kind")
+    if kind == "student":
+        nid, cls = ctx.get("national_id"), ctx.get("class")
+        if target == "students:all":
+            return True
+        if target == f"students:class:{cls}":
+            return True
+        if target.startswith("students:level:") and cls:
+            return cls[0] == target.split(":", 2)[2]
+        if target == f"students:one:{nid}":
+            return True
+    elif kind == "teacher":
+        eid = ctx.get("employee_id")
+        if target == "teachers:all":
+            return True
+        if target == f"teachers:one:{eid}":
+            return True
+    elif kind == "monitor":
+        eid = ctx.get("employee_id")
+        if target == "monitors:all":
+            return True
+        if target == f"monitors:one:{eid}":
+            return True
+    elif kind == "role":
+        return target == f"role:{ctx.get('role')}"
+    return False
+
+
+@app.route("/api/announcements/for/students")
+def announcements_for_students():
+    nid = request.args.get("national_id", "")
+    cls = request.args.get("class", "")
     anns = db.get_announcements() if db.DB_ENABLED else load_json(ANN_FILE, [])
-    if audience == "students":
-        result = [a for a in anns if a["target"] in ("all", "students")]
-    elif audience == "teachers":
-        result = [a for a in anns if a["target"] in ("all", "teachers")]
-    else:
-        result = [a for a in anns if a["target"] in ("all", "students", f"class:{audience}")]
+    result = [a for a in anns if _announcement_matches(a["target"], kind="student", national_id=nid, **{"class": cls})]
     return jsonify(result)
 
 
-# ---------------- Staff directory (for الناظر: teachers + supervisors) ----------------
+@app.route("/api/announcements/for/teachers")
+def announcements_for_teachers():
+    eid = request.args.get("employee_id", "")
+    anns = db.get_announcements() if db.DB_ENABLED else load_json(ANN_FILE, [])
+    result = [a for a in anns if _announcement_matches(a["target"], kind="teacher", employee_id=eid)]
+    return jsonify(result)
+
+
+@app.route("/api/announcements/for/role/<role>")
+def announcements_for_role(role):
+    """role = 'supervisor' | 'counselor' | 'bursar'"""
+    anns = db.get_announcements() if db.DB_ENABLED else load_json(ANN_FILE, [])
+    result = [a for a in anns if _announcement_matches(a["target"], kind="role", role=role)]
+    return jsonify(result)
+
+
+# ---------------- Staff directory ----------------
+
+@app.route("/api/staff/all")
+def staff_all():
+    return jsonify(STAFF)
+
 
 @app.route("/api/staff/teaching-and-supervisory")
 def staff_teaching_and_supervisory():
