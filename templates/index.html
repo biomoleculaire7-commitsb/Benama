@@ -64,6 +64,11 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 .stu-search-item .cls-tag{float:left;font-size:11px;color:var(--ochre-deep);font-weight:700;}
 .picked-student{background:var(--sage);border-radius:8px;padding:10px 14px;font-size:13.5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
 .picked-student button{background:none;border:none;color:#C0392B;cursor:pointer;font-size:16px;}
+@media print{
+  body *{visibility:hidden;}
+  #receiptCard, #receiptCard *{visibility:visible;}
+  #receiptCard{position:absolute;top:0;right:0;left:0;}
+}
 </style>
 </head>
 <body>
@@ -113,6 +118,50 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <button class="btn" onclick="loginAdmin()">دخول فضائي</button>
         <div id="loginAdminError" class="login-error"></div>
       </div>
+    </div>
+    <div style="text-align:center;margin-top:22px">
+      <button class="btn" style="background:var(--green)" onclick="showRegisterForm()">📝 استمارة التسجيل للموسم الدراسي 2026/2027</button>
+    </div>
+  </div>
+
+  <!-- PUBLIC REGISTRATION FORM (no login needed) -->
+  <div id="registerScreen" style="display:none">
+    <div class="card">
+      <h3>📝 استمارة التسجيل — الموسم الدراسي 2026/2027</h3>
+      <p class="hint" style="margin-bottom:16px">يرجى تعبئة جميع الخانات أدناه بدقة. جميع الحقول إجبارية.</p>
+
+      <div class="field"><label>اللقب *</label><input type="text" class="inline-input" id="regLastName"></div>
+      <div class="field"><label>الاسم *</label><input type="text" class="inline-input" id="regFirstName"></div>
+      <div class="field"><label>تاريخ الميلاد *</label><input type="date" class="inline-input" id="regBirthDate"></div>
+      <div class="field"><label>اسم الأب *</label><input type="text" class="inline-input" id="regFatherName"></div>
+      <div class="field"><label>لقب الأم *</label><input type="text" class="inline-input" id="regMotherLastName"></div>
+      <div class="field"><label>اسم الأم *</label><input type="text" class="inline-input" id="regMotherFirstName"></div>
+      <div class="field"><label>عنوان السكن *</label><input type="text" class="inline-input" id="regAddress"></div>
+      <div class="field"><label>رقم هاتف الولي *</label><input type="text" class="inline-input" id="regParentPhone" inputmode="numeric" placeholder="0XXXXXXXXX"></div>
+      <div class="field"><label>رقم واتساب الولي *</label><input type="text" class="inline-input" id="regParentWhatsapp" inputmode="numeric" placeholder="0XXXXXXXXX"></div>
+      <div class="field">
+        <label>المستوى الدراسي المسجَّل فيه *</label>
+        <select id="regLevel" class="inline-input">
+          <option value="1">السنة الأولى متوسط</option>
+          <option value="2">السنة الثانية متوسط</option>
+          <option value="3">السنة الثالثة متوسط</option>
+          <option value="4">السنة الرابعة متوسط</option>
+        </select>
+      </div>
+
+      <div id="regError" class="login-error"></div>
+      <button class="btn" onclick="submitRegistration()">✔ تأكيد التسجيل</button>
+      <button class="btn" style="background:transparent;color:var(--green);border:1.5px solid var(--green)" onclick="hideRegisterForm()">رجوع</button>
+    </div>
+  </div>
+
+  <!-- REGISTRATION RECEIPT -->
+  <div id="registerReceiptScreen" style="display:none">
+    <div class="card" id="receiptCard">
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <button class="btn" onclick="window.print()">🖨️ طباعة الوثيقة</button>
+      <button class="btn" style="background:transparent;color:var(--green);border:1.5px solid var(--green)" onclick="hideRegisterForm()">إنهاء</button>
     </div>
   </div>
 
@@ -304,6 +353,12 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
         <h3>📢 الإعلانات الموجَّهة إليّ</h3>
         <div id="supervisorAnnList"><div class="empty">جارٍ التحميل...</div></div>
       </div>
+
+      <div class="card">
+        <h3>📝 متابعة استمارات التسجيل — الموسم 2026/2027</h3>
+        <div id="registrationsList"><div class="empty">جارٍ التحميل...</div></div>
+      </div>
+
       <div class="switcher">
         <button class="active" id="supTabStudents" onclick="setSupTab('students')">🎒 غياب التلاميذ</button>
         <button id="supTabStaff" onclick="setSupTab('staff')">👥 غياب الأساتذة والمشرفين</button>
@@ -437,6 +492,77 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 <script>
 let currentUser = null;
 
+// ---- Public registration form ----
+function showRegisterForm(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('registerScreen').style.display = 'block';
+}
+function hideRegisterForm(){
+  document.getElementById('registerScreen').style.display = 'none';
+  document.getElementById('registerReceiptScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'block';
+  ['regLastName','regFirstName','regBirthDate','regFatherName','regMotherLastName',
+   'regMotherFirstName','regAddress','regParentPhone','regParentWhatsapp'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('regError').innerText = '';
+}
+
+async function submitRegistration(){
+  const fields = {
+    last_name: document.getElementById('regLastName').value.trim(),
+    first_name: document.getElementById('regFirstName').value.trim(),
+    birth_date: document.getElementById('regBirthDate').value,
+    father_name: document.getElementById('regFatherName').value.trim(),
+    mother_last_name: document.getElementById('regMotherLastName').value.trim(),
+    mother_first_name: document.getElementById('regMotherFirstName').value.trim(),
+    address: document.getElementById('regAddress').value.trim(),
+    parent_phone: document.getElementById('regParentPhone').value.trim(),
+    parent_whatsapp: document.getElementById('regParentWhatsapp').value.trim(),
+    level: document.getElementById('regLevel').value,
+  };
+  const errDiv = document.getElementById('regError');
+  const missing = Object.values(fields).some(v => !v);
+  if(missing){ errDiv.innerText = '⚠️ يرجى تعبئة جميع الخانات المطلوبة قبل التأكيد.'; return; }
+  errDiv.innerText = '';
+
+  const res = await fetch('/api/registrations', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(fields)
+  });
+  const data = await res.json();
+  if(!data.ok){ errDiv.innerText = '⚠️ ' + data.error; return; }
+
+  renderReceipt(data.receipt);
+  document.getElementById('registerScreen').style.display = 'none';
+  document.getElementById('registerReceiptScreen').style.display = 'block';
+}
+
+function renderReceipt(r){
+  const docsList = r.requires_full_docs ? `
+    <h3 style="margin-top:18px">الوثائق المطلوبة لإتمام ملف التسجيل</h3>
+    <ul style="padding-right:20px;line-height:2">
+      <li>ملف التسجيل (مطبوع من إدارة المؤسسة أو مكتبة)</li>
+      <li>صورتان (2) شمسيتان حديثتان</li>
+      <li>تكاليف التسجيل: <b>45 دج</b></li>
+      <li>دفتر المراسلة</li>
+      <li>شهادة ميلاد (نسخة كاملة)</li>
+    </ul>` : `<p class="hint" style="margin-top:14px">لا وثائق إضافية إجبارية لهذا المستوى — يُرجى التواصل مع إدارة المؤسسة لأي استفسار.</p>`;
+
+  document.getElementById('receiptCard').innerHTML = `
+    <h2 style="text-align:center;margin-bottom:6px">متوسطة الشهيد بن نعمة مصطفى</h2>
+    <p style="text-align:center;color:var(--ochre-deep);font-weight:700;margin-bottom:20px">وصل تسجيل أولي — الموسم الدراسي 2026/2027</p>
+    <table>
+      <tr><th>اللقب</th><td>${r.last_name}</td></tr>
+      <tr><th>الاسم</th><td>${r.first_name}</td></tr>
+      <tr><th>تاريخ الميلاد</th><td>${r.birth_date}</td></tr>
+      <tr><th>المستوى</th><td>${r.level_label}</td></tr>
+    </table>
+    ${docsList}
+    <p class="hint" style="margin-top:20px">يرجى إحضار هذه الوثيقة مع الملف الكامل إلى إدارة المؤسسة لإتمام التسجيل النهائي.</p>
+  `;
+}
+
+
 function setLoginTab(tab){
   document.getElementById('btnLoginStudent').classList.toggle('active', tab==='student');
   document.getElementById('btnLoginTeacher').classList.toggle('active', tab==='teacher');
@@ -543,6 +669,7 @@ async function enterApp(){
       document.getElementById('summonsListDate').value = todayStr;
       populateClassDropdown('supClassSelect', loadSupervisorRoster);
       loadSummonsList();
+      loadRegistrations();
     } else if(currentUser.admin_role==='counselor'){
       document.getElementById('counselorMode').style.display = 'block';
       loadAnnouncementsFor('counselor', 'counselorAnnList');
@@ -1176,6 +1303,36 @@ async function loadSummonsList(){
   container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>بطلب من</th><th>أرسله</th><th>التوقيت</th></tr>
     ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${s.on_behalf_of||'—'}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} — ${s.requested_by_name}</td><td>${s.time}</td></tr>`).join('')}
     </table>` : '<div class="empty">لا استدعاءات مسجَّلة لهذا اليوم.</div>';
+}
+
+// ---- Supervisor: registration tracking ----
+async function loadRegistrations(){
+  const res = await fetch('/api/registrations');
+  const list = await res.json();
+  const container = document.getElementById('registrationsList');
+  if(list.length===0){
+    container.innerHTML = '<div class="empty">لا استمارات تسجيل بعد.</div>';
+    return;
+  }
+  container.innerHTML = `<div class="roster-badge" style="margin-bottom:10px">📝 العدد: ${list.length}</div>
+    <table><tr><th>مسجَّل؟</th><th>اللقب والاسم</th><th>المستوى</th><th>هاتف الولي</th><th>تاريخ التسجيل</th></tr>
+    ${list.map(r=>`<tr>
+      <td><input type="checkbox" ${r.file_complete?'checked':''} onchange="toggleRegistrationComplete(${r.id}, this.checked)"></td>
+      <td>${r.last_name} ${r.first_name}</td>
+      <td>${r.level_label}</td>
+      <td>${r.parent_phone}</td>
+      <td>${r.date}</td>
+    </tr>`).join('')}
+    </table>`;
+}
+
+async function toggleRegistrationComplete(regId, complete){
+  const res = await fetch(`/api/registrations/${regId}/complete`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({complete})
+  });
+  const data = await res.json();
+  if(data.ok) showToast(complete ? '✔ تم تأكيد استلام الملف' : 'تم إلغاء التأكيد');
+  else showToast('⚠️ تعذّر الحفظ');
 }
 
 function showToast(msg){
