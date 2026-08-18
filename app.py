@@ -346,6 +346,89 @@ def search_students():
 # ---------------- Summons (استدعاء تلميذ) ----------------
 
 SUMMONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "summons.json")
+REGISTRATIONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "registrations.json")
+
+
+# ---------------- Registrations (استمارة التسجيل 2026/2027) ----------------
+
+REGISTRATION_REQUIRED_FIELDS = [
+    "last_name", "first_name", "birth_date", "father_name",
+    "mother_last_name", "mother_first_name", "address",
+    "parent_phone", "parent_whatsapp", "level",
+]
+
+LEVEL_LABELS = {
+    "1": "السنة الأولى متوسط",
+    "2": "السنة الثانية متوسط",
+    "3": "السنة الثالثة متوسط",
+    "4": "السنة الرابعة متوسط",
+}
+
+
+@app.route("/api/registrations", methods=["POST"])
+def create_registration():
+    data = request.get_json(force=True)
+    cleaned = {}
+    missing = []
+    for field in REGISTRATION_REQUIRED_FIELDS:
+        val = (data.get(field) or "").strip()
+        if not val:
+            missing.append(field)
+        cleaned[field] = val
+    if missing:
+        return jsonify({"ok": False, "error": "يرجى تعبئة جميع الخانات المطلوبة."}), 400
+    if cleaned["level"] not in LEVEL_LABELS:
+        return jsonify({"ok": False, "error": "مستوى غير صالح."}), 400
+
+    if db.DB_ENABLED:
+        new_id = db.add_registration(cleaned)
+    else:
+        regs = load_json(REGISTRATIONS_FILE, [])
+        new_id = (max([r["id"] for r in regs], default=0)) + 1
+        regs.insert(0, {
+            "id": new_id, **cleaned, "file_complete": False,
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        })
+        save_json(REGISTRATIONS_FILE, regs)
+
+    requires_full_docs = cleaned["level"] in ("1", "4")
+    return jsonify({
+        "ok": True,
+        "id": new_id,
+        "receipt": {
+            "last_name": cleaned["last_name"],
+            "first_name": cleaned["first_name"],
+            "birth_date": cleaned["birth_date"],
+            "level_label": LEVEL_LABELS[cleaned["level"]],
+            "requires_full_docs": requires_full_docs,
+        }
+    })
+
+
+@app.route("/api/registrations", methods=["GET"])
+def list_registrations():
+    if db.DB_ENABLED:
+        rows = db.get_registrations()
+    else:
+        rows = load_json(REGISTRATIONS_FILE, [])
+    for r in rows:
+        r["level_label"] = LEVEL_LABELS.get(r["level"], r["level"])
+    return jsonify(rows)
+
+
+@app.route("/api/registrations/<int:reg_id>/complete", methods=["POST"])
+def mark_registration_complete(reg_id):
+    data = request.get_json(force=True)
+    complete = bool(data.get("complete"))
+    if db.DB_ENABLED:
+        db.set_registration_complete(reg_id, complete)
+    else:
+        regs = load_json(REGISTRATIONS_FILE, [])
+        for r in regs:
+            if r["id"] == reg_id:
+                r["file_complete"] = complete
+        save_json(REGISTRATIONS_FILE, regs)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/summons", methods=["POST"])
