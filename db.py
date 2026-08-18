@@ -166,6 +166,23 @@ def init_db():
     cur.execute("""
         ALTER TABLE summons ADD COLUMN IF NOT EXISTS on_behalf_of TEXT;
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS registrations (
+            id SERIAL PRIMARY KEY,
+            last_name TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            birth_date TEXT NOT NULL,
+            father_name TEXT NOT NULL,
+            mother_last_name TEXT NOT NULL,
+            mother_first_name TEXT NOT NULL,
+            address TEXT NOT NULL,
+            parent_phone TEXT NOT NULL,
+            parent_whatsapp TEXT NOT NULL,
+            level TEXT NOT NULL,
+            file_complete BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
     conn.commit()
     cur.close()
     conn.close()
@@ -343,6 +360,38 @@ def get_logins_for_date(date):
     rows = _dictify(cur)
     cur.close(); conn.close()
     return rows
+
+
+# ---------------- Registrations (استمارة التسجيل 2026/2027) ----------------
+
+def add_registration(data):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("""INSERT INTO registrations (last_name, first_name, birth_date, father_name,
+                    mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp, level)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (data["last_name"], data["first_name"], data["birth_date"], data["father_name"],
+                 data["mother_last_name"], data["mother_first_name"], data["address"],
+                 data["parent_phone"], data["parent_whatsapp"], data["level"]))
+    new_id = cur.fetchone()[0]
+    conn.commit(); cur.close(); conn.close()
+    return new_id
+
+
+def get_registrations():
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("""SELECT id, last_name, first_name, birth_date, father_name,
+                    mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp,
+                    level, file_complete, to_char(created_at,'YYYY-MM-DD HH24:MI') AS date
+                    FROM registrations ORDER BY created_at DESC""")
+    rows = _dictify(cur)
+    cur.close(); conn.close()
+    return rows
+
+
+def set_registration_complete(reg_id, complete):
+    conn = get_conn(); cur = conn.cursor()
+    cur.execute("UPDATE registrations SET file_complete=%s WHERE id=%s", (complete, reg_id))
+    conn.commit(); cur.close(); conn.close()
 
 
 # ---------------- Summons (استدعاء تلميذ) ----------------
