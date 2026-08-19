@@ -431,6 +431,25 @@ def mark_registration_complete(reg_id):
     return jsonify({"ok": True})
 
 
+@app.route("/api/registrations/summary")
+def registrations_summary():
+    if db.DB_ENABLED:
+        regs = db.get_registrations()
+    else:
+        regs = load_json(REGISTRATIONS_FILE, [])
+    total = len(regs)
+    completed = len([r for r in regs if r.get("file_complete")])
+    by_level = {}
+    for r in regs:
+        if r.get("file_complete"):
+            by_level[r["level"]] = by_level.get(r["level"], 0) + 1
+    return jsonify({
+        "total_submitted": total,
+        "total_completed": completed,
+        "completed_by_level": {LEVEL_LABELS.get(k, k): v for k, v in by_level.items()},
+    })
+
+
 @app.route("/api/summons", methods=["POST"])
 def create_summons():
     data = request.get_json(force=True)
