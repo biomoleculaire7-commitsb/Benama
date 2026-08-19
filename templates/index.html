@@ -64,11 +64,6 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 .stu-search-item .cls-tag{float:left;font-size:11px;color:var(--ochre-deep);font-weight:700;}
 .picked-student{background:var(--sage);border-radius:8px;padding:10px 14px;font-size:13.5px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
 .picked-student button{background:none;border:none;color:#C0392B;cursor:pointer;font-size:16px;}
-@media print{
-  body *{visibility:hidden;}
-  #receiptCard, #receiptCard *{visibility:visible;}
-  #receiptCard{position:absolute;top:0;right:0;left:0;}
-}
 </style>
 </head>
 <body>
@@ -160,7 +155,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
     <div class="card" id="receiptCard">
     </div>
     <div style="text-align:center;margin-top:14px">
-      <button class="btn" onclick="window.print()">🖨️ طباعة الوثيقة</button>
+      <button class="btn" onclick="printReceipt()">🖨️ طباعة الوثيقة</button>
       <button class="btn" style="background:transparent;color:var(--green);border:1.5px solid var(--green)" onclick="hideRegisterForm()">إنهاء</button>
     </div>
   </div>
@@ -222,6 +217,11 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
 
     <!-- ADMIN: director -->
     <div id="directorMode" style="display:none">
+      <div class="card">
+        <h3>📝 التسجيل للموسم الدراسي 2026/2027</h3>
+        <div id="registrationsSummary"><div class="empty">جارٍ التحميل...</div></div>
+        <div class="hint">العدد المعتمَد هو من أكمل الناظر تسجيله فعلياً (بعد إحضار الملف الكامل)، وليس مجرد من قدَّم الاستمارة.</div>
+      </div>
       <div class="card">
         <h3>📊 التقرير اليومي</h3>
         <div class="field" style="max-width:220px">
@@ -548,18 +548,35 @@ function renderReceipt(r){
       <li>شهادة ميلاد (نسخة كاملة)</li>
     </ul>` : `<p class="hint" style="margin-top:14px">لا وثائق إضافية إجبارية لهذا المستوى — يُرجى التواصل مع إدارة المؤسسة لأي استفسار.</p>`;
 
-  document.getElementById('receiptCard').innerHTML = `
+  const receiptHTML = `
     <h2 style="text-align:center;margin-bottom:6px">متوسطة الشهيد بن نعمة مصطفى</h2>
-    <p style="text-align:center;color:var(--ochre-deep);font-weight:700;margin-bottom:20px">وصل تسجيل أولي — الموسم الدراسي 2026/2027</p>
-    <table>
-      <tr><th>اللقب</th><td>${r.last_name}</td></tr>
-      <tr><th>الاسم</th><td>${r.first_name}</td></tr>
-      <tr><th>تاريخ الميلاد</th><td>${r.birth_date}</td></tr>
-      <tr><th>المستوى</th><td>${r.level_label}</td></tr>
+    <p style="text-align:center;color:#9C5F10;font-weight:700;margin-bottom:20px">وصل تسجيل أولي — الموسم الدراسي 2026/2027</p>
+    <table style="width:100%;border-collapse:collapse">
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">اللقب</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.last_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">الاسم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.first_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">تاريخ الميلاد</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.birth_date}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">المستوى</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.level_label}</td></tr>
     </table>
     ${docsList}
-    <p class="hint" style="margin-top:20px">يرجى إحضار هذه الوثيقة مع الملف الكامل إلى إدارة المؤسسة لإتمام التسجيل النهائي.</p>
+    <p style="margin-top:20px;color:#6f6a5c;font-size:13px">يرجى إحضار هذه الوثيقة مع الملف الكامل إلى إدارة المؤسسة لإتمام التسجيل النهائي.</p>
   `;
+
+  document.getElementById('receiptCard').innerHTML = receiptHTML;
+  document.getElementById('receiptCard').dataset.receiptHtml = receiptHTML;
+}
+
+function printReceipt(){
+  const html = document.getElementById('receiptCard').dataset.receiptHtml;
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+    <title>وصل تسجيل</title>
+    <style>body{font-family:'Tajawal','Segoe UI',sans-serif;padding:30px;color:#1E1B16;}</style>
+    </head><body>${html}</body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 300);
 }
 
 
@@ -658,6 +675,7 @@ async function enterApp(){
       document.getElementById('dirSummonTime').value = new Date().toTimeString().slice(0,5);
       populateAnnouncementDropdowns();
       loadDailyReport();
+      loadRegistrationsSummary();
     } else if(currentUser.admin_role==='supervisor'){
       document.getElementById('supervisorMode').style.display = 'block';
       loadAnnouncementsFor('supervisor', 'supervisorAnnList');
@@ -1303,6 +1321,18 @@ async function loadSummonsList(){
   container.innerHTML = list.length ? `<table><tr><th>التلميذ</th><th>القسم</th><th>السبب</th><th>بطلب من</th><th>أرسله</th><th>التوقيت</th></tr>
     ${list.map(s=>`<tr><td>${s.last_name} ${s.first_name}</td><td>${s.class}</td><td>${s.reason}</td><td>${s.on_behalf_of||'—'}</td><td>${roleLabels[s.requested_by_role]||s.requested_by_role} — ${s.requested_by_name}</td><td>${s.time}</td></tr>`).join('')}
     </table>` : '<div class="empty">لا استدعاءات مسجَّلة لهذا اليوم.</div>';
+}
+
+// ---- Director: registrations summary ----
+async function loadRegistrationsSummary(){
+  const res = await fetch('/api/registrations/summary');
+  const s = await res.json();
+  const byLevelHtml = Object.entries(s.completed_by_level).map(([lvl,count])=>
+    `<div class="roster-badge">${lvl}: ${count}</div>`).join('');
+  document.getElementById('registrationsSummary').innerHTML = `
+    <div class="roster-badge" style="background:var(--green);color:#fff">✔ مسجَّلون نهائياً: ${s.total_completed}</div>
+    <div class="roster-badge">📝 مجموع الاستمارات المقدَّمة: ${s.total_submitted}</div>
+    ${byLevelHtml ? '<div style="margin-top:8px">'+byLevelHtml+'</div>' : ''}`;
 }
 
 // ---- Supervisor: registration tracking ----
