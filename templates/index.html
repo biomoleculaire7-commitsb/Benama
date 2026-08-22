@@ -123,6 +123,9 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
   <div id="registerScreen" style="display:none">
     <div class="card">
       <h3>📝 استمارة التسجيل — الموسم الدراسي 2026/2027</h3>
+      <p style="background:#EFE8D8;border-radius:6px;padding:10px;font-size:13.5px;margin-bottom:12px;text-align:center">
+        🗓️ فترة التسجيل: من <b>08 سبتمبر 2026</b> إلى غاية <b>15 سبتمبر 2026</b>
+      </p>
       <p class="hint" style="margin-bottom:16px">يرجى تعبئة جميع الخانات أدناه بدقة. جميع الحقول إجبارية.</p>
 
       <div class="field"><label>اللقب *</label><input type="text" class="inline-input" id="regLastName"></div>
@@ -539,18 +542,22 @@ async function submitRegistration(){
 
 function renderReceipt(r){
   const docsList = r.requires_full_docs ? `
-    <h3 style="margin-top:18px">الوثائق المطلوبة لإتمام ملف التسجيل</h3>
-    <ul style="padding-right:20px;line-height:2">
-      <li>ملف التسجيل (مطبوع من إدارة المؤسسة أو مكتبة)</li>
-      <li>صورتان (2) شمسيتان حديثتان</li>
-      <li>تكاليف التسجيل: <b>45 دج</b></li>
-      <li>دفتر المراسلة</li>
-      <li>شهادة ميلاد (نسخة كاملة)</li>
-    </ul>` : `<p class="hint" style="margin-top:14px">لا وثائق إضافية إجبارية لهذا المستوى — يُرجى التواصل مع إدارة المؤسسة لأي استفسار.</p>`;
+    <h3 style="margin-top:18px">محتويات ملف التسجيل الكامل</h3>
+    <p class="hint" style="margin-bottom:8px">يجب إيداع الملف كاملاً لدى مصلحة الناظر خلال فترة التسجيل المحدَّدة أدناه، وإلا اعتُبر التسجيل غير مكتمل.</p>
+    <ol style="padding-right:20px;line-height:2.1">
+      <li><b>ملف التسجيل المدرسي</b> — مطبوع، يُقتنى من مكتبة أو من إدارة المؤسسة، ويُملأ من طرف الولي</li>
+      <li><b>صورتان (2) شمسيتان</b> — حديثتان، بخلفية بيضاء، بمقاس صورة الهوية</li>
+      <li><b>شهادة ميلاد أصلية</b> — نسخة كاملة (رقم 12)، لا تتجاوز 6 أشهر</li>
+      <li><b>دفتر المراسلة</b> — يُقتنى من مكتبة، يحمل اسم ولقب التلميذ(ة)</li>
+      <li><b>تكاليف التسجيل: 45 دج</b> — تُدفع نقداً عند إيداع الملف</li>
+    </ol>` : `<p class="hint" style="margin-top:14px">لا وثائق إضافية إجبارية لهذا المستوى — يُرجى التواصل مع إدارة المؤسسة لأي استفسار.</p>`;
 
   const receiptHTML = `
     <h2 style="text-align:center;margin-bottom:6px">متوسطة الشهيد بن نعمة مصطفى</h2>
-    <p style="text-align:center;color:#9C5F10;font-weight:700;margin-bottom:20px">وصل تسجيل أولي — الموسم الدراسي 2026/2027</p>
+    <p style="text-align:center;color:#9C5F10;font-weight:700;margin-bottom:6px">وصل تسجيل أولي — الموسم الدراسي 2026/2027</p>
+    <p style="text-align:center;background:#EFE8D8;border-radius:6px;padding:10px;font-size:13.5px;margin-bottom:20px">
+      🗓️ <b>رزنامة التسجيل:</b> من 08 سبتمبر 2026 إلى غاية 15 سبتمبر 2026
+    </p>
     <table style="width:100%;border-collapse:collapse">
       <tr><th style="text-align:right;background:#EFE8D8;padding:8px">اللقب</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.last_name}</td></tr>
       <tr><th style="text-align:right;background:#EFE8D8;padding:8px">الاسم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.first_name}</td></tr>
@@ -558,7 +565,7 @@ function renderReceipt(r){
       <tr><th style="text-align:right;background:#EFE8D8;padding:8px">المستوى</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.level_label}</td></tr>
     </table>
     ${docsList}
-    <p style="margin-top:20px;color:#6f6a5c;font-size:13px">يرجى إحضار هذه الوثيقة مع الملف الكامل إلى إدارة المؤسسة لإتمام التسجيل النهائي.</p>
+    <p style="margin-top:20px;color:#6f6a5c;font-size:13px">يرجى إحضار هذه الوثيقة مع الملف الكامل إلى إدارة المؤسسة (مصلحة الناظر) خلال فترة التسجيل المذكورة أعلاه لإتمام التسجيل النهائي.</p>
   `;
 
   document.getElementById('receiptCard').innerHTML = receiptHTML;
