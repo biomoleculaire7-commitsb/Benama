@@ -541,16 +541,16 @@ async function submitRegistration(){
 }
 
 function renderReceipt(r){
-  const docsList = r.requires_full_docs ? `
-    <h3 style="margin-top:18px">محتويات ملف التسجيل الكامل</h3>
+  const docsList = `
+    <h3 style="margin-top:18px">محتويات ملف التسجيل</h3>
     <p class="hint" style="margin-bottom:8px">يجب إيداع الملف كاملاً لدى مصلحة الناظر خلال فترة التسجيل المحدَّدة أدناه، وإلا اعتُبر التسجيل غير مكتمل.</p>
     <ol style="padding-right:20px;line-height:2.1">
-      <li><b>ملف التسجيل المدرسي</b> — مطبوع، يُقتنى من مكتبة أو من إدارة المؤسسة، ويُملأ من طرف الولي</li>
+      <li><b>ملف التسجيل المدرسي</b></li>
       <li><b>صورتان (2) شمسيتان</b> — حديثتان، بخلفية بيضاء، بمقاس صورة الهوية</li>
-      <li><b>شهادة ميلاد أصلية</b> — نسخة كاملة (رقم 12)، لا تتجاوز 6 أشهر</li>
       <li><b>دفتر المراسلة</b> — يُقتنى من مكتبة، يحمل اسم ولقب التلميذ(ة)</li>
       <li><b>تكاليف التسجيل: 45 دج</b> — تُدفع نقداً عند إيداع الملف</li>
-    </ol>` : `<p class="hint" style="margin-top:14px">لا وثائق إضافية إجبارية لهذا المستوى — يُرجى التواصل مع إدارة المؤسسة لأي استفسار.</p>`;
+      ${r.requires_full_docs ? '<li><b>شهادة ميلاد حديثة</b></li>' : ''}
+    </ol>`;
 
   const receiptHTML = `
     <h2 style="text-align:center;margin-bottom:6px">متوسطة الشهيد بن نعمة مصطفى</h2>
