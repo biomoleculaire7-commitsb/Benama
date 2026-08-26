@@ -126,26 +126,23 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       <p style="background:#EFE8D8;border-radius:6px;padding:10px;font-size:13.5px;margin-bottom:12px;text-align:center">
         🗓️ فترة التسجيل: من <b>08 سبتمبر 2026</b> إلى غاية <b>15 سبتمبر 2026</b>
       </p>
-      <p class="hint" style="margin-bottom:16px">يرجى تعبئة جميع الخانات أدناه بدقة. جميع الحقول إجبارية.</p>
+      <p class="hint" style="margin-bottom:16px">هذه الاستمارة مخصَّصة حصراً لتلاميذ المؤسسة الحاليين. ابحث عن اسم التلميذ(ة) أدناه لتأكيد هويته تلقائياً — لا يمكن المتابعة دون اختياره من القائمة.</p>
 
-      <div class="field"><label>اللقب *</label><input type="text" class="inline-input" id="regLastName"></div>
-      <div class="field"><label>الاسم *</label><input type="text" class="inline-input" id="regFirstName"></div>
-      <div class="field"><label>تاريخ الميلاد *</label><input type="date" class="inline-input" id="regBirthDate"></div>
+      <div class="field">
+        <label>ابحث عن التلميذ(ة) باللقب أو الاسم *</label>
+        <div class="stu-search-wrap">
+          <input type="text" class="inline-input" id="regStudentSearchInput" placeholder="اكتب حرفين على الأقل من الاسم..." oninput="handleStudentSearch(this, 'regStudentPicked', 'registration')">
+          <div class="stu-search-results" id="regStudentSearchResults"></div>
+        </div>
+        <div id="regStudentPicked"></div>
+      </div>
+
       <div class="field"><label>اسم الأب *</label><input type="text" class="inline-input" id="regFatherName"></div>
       <div class="field"><label>لقب الأم *</label><input type="text" class="inline-input" id="regMotherLastName"></div>
       <div class="field"><label>اسم الأم *</label><input type="text" class="inline-input" id="regMotherFirstName"></div>
       <div class="field"><label>عنوان السكن *</label><input type="text" class="inline-input" id="regAddress"></div>
       <div class="field"><label>رقم هاتف الولي *</label><input type="text" class="inline-input" id="regParentPhone" inputmode="numeric" placeholder="0XXXXXXXXX"></div>
       <div class="field"><label>رقم واتساب الولي *</label><input type="text" class="inline-input" id="regParentWhatsapp" inputmode="numeric" placeholder="0XXXXXXXXX"></div>
-      <div class="field">
-        <label>المستوى الدراسي المسجَّل فيه *</label>
-        <select id="regLevel" class="inline-input">
-          <option value="1">السنة الأولى متوسط</option>
-          <option value="2">السنة الثانية متوسط</option>
-          <option value="3">السنة الثالثة متوسط</option>
-          <option value="4">السنة الرابعة متوسط</option>
-        </select>
-      </div>
 
       <div id="regError" class="login-error"></div>
       <button class="btn" onclick="submitRegistration()">✔ تأكيد التسجيل</button>
@@ -504,27 +501,28 @@ function hideRegisterForm(){
   document.getElementById('registerScreen').style.display = 'none';
   document.getElementById('registerReceiptScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'block';
-  ['regLastName','regFirstName','regBirthDate','regFatherName','regMotherLastName',
-   'regMotherFirstName','regAddress','regParentPhone','regParentWhatsapp'].forEach(id=>{
+  ['regFatherName','regMotherLastName','regMotherFirstName','regAddress',
+   'regParentPhone','regParentWhatsapp'].forEach(id=>{
     document.getElementById(id).value = '';
   });
+  clearPickedStudent('regStudentPicked','registration');
   document.getElementById('regError').innerText = '';
 }
 
 async function submitRegistration(){
+  const errDiv = document.getElementById('regError');
+  const stu = _pickedStudents['registration'];
+  if(!stu){ errDiv.innerText = '⚠️ يرجى البحث عن التلميذ(ة) واختياره من نتائج البحث أولاً.'; return; }
+
   const fields = {
-    last_name: document.getElementById('regLastName').value.trim(),
-    first_name: document.getElementById('regFirstName').value.trim(),
-    birth_date: document.getElementById('regBirthDate').value,
+    national_id: stu.national_id,
     father_name: document.getElementById('regFatherName').value.trim(),
     mother_last_name: document.getElementById('regMotherLastName').value.trim(),
     mother_first_name: document.getElementById('regMotherFirstName').value.trim(),
     address: document.getElementById('regAddress').value.trim(),
     parent_phone: document.getElementById('regParentPhone').value.trim(),
     parent_whatsapp: document.getElementById('regParentWhatsapp').value.trim(),
-    level: document.getElementById('regLevel').value,
   };
-  const errDiv = document.getElementById('regError');
   const missing = Object.values(fields).some(v => !v);
   if(missing){ errDiv.innerText = '⚠️ يرجى تعبئة جميع الخانات المطلوبة قبل التأكيد.'; return; }
   errDiv.innerText = '';
@@ -561,7 +559,7 @@ function renderReceipt(r){
     <table style="width:100%;border-collapse:collapse">
       <tr><th style="text-align:right;background:#EFE8D8;padding:8px">اللقب</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.last_name}</td></tr>
       <tr><th style="text-align:right;background:#EFE8D8;padding:8px">الاسم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.first_name}</td></tr>
-      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">تاريخ الميلاد</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.birth_date}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">القسم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.class_name}</td></tr>
       <tr><th style="text-align:right;background:#EFE8D8;padding:8px">المستوى</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.level_label}</td></tr>
     </table>
     ${docsList}
@@ -1244,6 +1242,12 @@ function pickStudent(stu, pickedContainerId, scope){
     loadCounselorRoster().then(()=> openCounselorStudent(stu));
     return;
   }
+  if(scope === 'registration'){
+    const container = document.getElementById(pickedContainerId);
+    container.innerHTML = `<div class="picked-student">👤 ${stu.last_name} ${stu.first_name} — القسم: <b>${stu.class}</b>
+      <button onclick="clearPickedStudent('${pickedContainerId}','${scope}')">✕</button></div>`;
+    return;
+  }
   // otherwise: summons picker — show the chosen student as a chip + parent WhatsApp
   const container = document.getElementById(pickedContainerId);
   container.innerHTML = `
@@ -1352,11 +1356,11 @@ async function loadRegistrations(){
     return;
   }
   container.innerHTML = `<div class="roster-badge" style="margin-bottom:10px">📝 العدد: ${list.length}</div>
-    <table><tr><th>مسجَّل؟</th><th>اللقب والاسم</th><th>المستوى</th><th>هاتف الولي</th><th>تاريخ التسجيل</th></tr>
+    <table><tr><th>مسجَّل؟</th><th>اللقب والاسم</th><th>القسم</th><th>هاتف الولي</th><th>تاريخ التسجيل</th></tr>
     ${list.map(r=>`<tr>
       <td><input type="checkbox" ${r.file_complete?'checked':''} onchange="toggleRegistrationComplete(${r.id}, this.checked)"></td>
       <td>${r.last_name} ${r.first_name}</td>
-      <td>${r.level_label}</td>
+      <td>${r.class_name}</td>
       <td>${r.parent_phone}</td>
       <td>${r.date}</td>
     </tr>`).join('')}
