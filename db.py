@@ -169,9 +169,10 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS registrations (
             id SERIAL PRIMARY KEY,
+            national_id TEXT NOT NULL UNIQUE,
             last_name TEXT NOT NULL,
             first_name TEXT NOT NULL,
-            birth_date TEXT NOT NULL,
+            class_name TEXT NOT NULL,
             father_name TEXT NOT NULL,
             mother_last_name TEXT NOT NULL,
             mother_first_name TEXT NOT NULL,
@@ -182,6 +183,12 @@ def init_db():
             file_complete BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT NOW()
         );
+    """)
+    cur.execute("""
+        ALTER TABLE registrations ADD COLUMN IF NOT EXISTS national_id TEXT;
+    """)
+    cur.execute("""
+        ALTER TABLE registrations ADD COLUMN IF NOT EXISTS class_name TEXT;
     """)
     conn.commit()
     cur.close()
@@ -366,10 +373,14 @@ def get_logins_for_date(date):
 
 def add_registration(data):
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("""INSERT INTO registrations (last_name, first_name, birth_date, father_name,
+    cur.execute("SELECT id FROM registrations WHERE national_id=%s", (data["national_id"],))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise ValueError("duplicate")
+    cur.execute("""INSERT INTO registrations (national_id, last_name, first_name, class_name, father_name,
                     mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp, level)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
-                (data["last_name"], data["first_name"], data["birth_date"], data["father_name"],
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (data["national_id"], data["last_name"], data["first_name"], data["class_name"], data["father_name"],
                  data["mother_last_name"], data["mother_first_name"], data["address"],
                  data["parent_phone"], data["parent_whatsapp"], data["level"]))
     new_id = cur.fetchone()[0]
@@ -379,7 +390,7 @@ def add_registration(data):
 
 def get_registrations():
     conn = get_conn(); cur = conn.cursor()
-    cur.execute("""SELECT id, last_name, first_name, birth_date, father_name,
+    cur.execute("""SELECT id, national_id, last_name, first_name, class_name, father_name,
                     mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp,
                     level, file_complete, to_char(created_at,'YYYY-MM-DD HH24:MI') AS date
                     FROM registrations ORDER BY created_at DESC""")
