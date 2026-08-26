@@ -352,9 +352,9 @@ REGISTRATIONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "registrations.jso
 # ---------------- Registrations (استمارة التسجيل 2026/2027) ----------------
 
 REGISTRATION_REQUIRED_FIELDS = [
-    "last_name", "first_name", "birth_date", "father_name",
+    "national_id", "father_name",
     "mother_last_name", "mother_first_name", "address",
-    "parent_phone", "parent_whatsapp", "level",
+    "parent_phone", "parent_whatsapp",
 ]
 
 LEVEL_LABELS = {
@@ -376,30 +376,56 @@ def create_registration():
             missing.append(field)
         cleaned[field] = val
     if missing:
-        return jsonify({"ok": False, "error": "يرجى تعبئة جميع الخانات المطلوبة."}), 400
-    if cleaned["level"] not in LEVEL_LABELS:
-        return jsonify({"ok": False, "error": "مستوى غير صالح."}), 400
+        return jsonify({"ok": False, "error": "يرجى تعبئة جميع الخانات المطلوبة، واختيار التلميذ(ة) من نتائج البحث."}), 400
+
+    nid = cleaned["national_id"]
+    stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
+    if not stu:
+        return jsonify({
+            "ok": False,
+            "error": "هذا التلميذ غير موجود ضمن قائمة تلاميذ المؤسسة. التسجيل عبر هذه الاستمارة متاح فقط لتلاميذ المؤسسة الحاليين — يرجى التواصل مع إدارة المؤسسة."
+        }), 403
+
+    level = stu["class"][0]  # first digit of class name, e.g. '2م1' -> '2'
+    record = {
+        "national_id": nid,
+        "last_name": stu["last_name"],
+        "first_name": stu["first_name"],
+        "class_name": stu["class"],
+        "level": level,
+        "father_name": cleaned["father_name"],
+        "mother_last_name": cleaned["mother_last_name"],
+        "mother_first_name": cleaned["mother_first_name"],
+        "address": cleaned["address"],
+        "parent_phone": cleaned["parent_phone"],
+        "parent_whatsapp": cleaned["parent_whatsapp"],
+    }
 
     if db.DB_ENABLED:
-        new_id = db.add_registration(cleaned)
+        try:
+            new_id = db.add_registration(record)
+        except ValueError:
+            return jsonify({"ok": False, "error": "تم تسجيل هذا التلميذ مسبقاً."}), 409
     else:
         regs = load_json(REGISTRATIONS_FILE, [])
+        if any(r["national_id"] == nid for r in regs):
+            return jsonify({"ok": False, "error": "تم تسجيل هذا التلميذ مسبقاً."}), 409
         new_id = (max([r["id"] for r in regs], default=0)) + 1
         regs.insert(0, {
-            "id": new_id, **cleaned, "file_complete": False,
+            "id": new_id, **record, "file_complete": False,
             "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
         })
         save_json(REGISTRATIONS_FILE, regs)
 
-    requires_full_docs = cleaned["level"] in ("1", "4")
+    requires_full_docs = level in ("1", "4")
     return jsonify({
         "ok": True,
         "id": new_id,
         "receipt": {
-            "last_name": cleaned["last_name"],
-            "first_name": cleaned["first_name"],
-            "birth_date": cleaned["birth_date"],
-            "level_label": LEVEL_LABELS[cleaned["level"]],
+            "last_name": stu["last_name"],
+            "first_name": stu["first_name"],
+            "class_name": stu["class"],
+            "level_label": LEVEL_LABELS[level],
             "requires_full_docs": requires_full_docs,
         }
     })
