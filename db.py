@@ -169,10 +169,10 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS registrations (
             id SERIAL PRIMARY KEY,
-            national_id TEXT NOT NULL UNIQUE,
-            last_name TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            class_name TEXT NOT NULL,
+            national_id TEXT,
+            last_name TEXT,
+            first_name TEXT,
+            class_name TEXT,
             father_name TEXT NOT NULL,
             mother_last_name TEXT NOT NULL,
             mother_first_name TEXT NOT NULL,
@@ -184,15 +184,38 @@ def init_db():
             created_at TIMESTAMP DEFAULT NOW()
         );
     """)
-    cur.execute("""
-        ALTER TABLE registrations ADD COLUMN IF NOT EXISTS national_id TEXT;
-    """)
-    cur.execute("""
-        ALTER TABLE registrations ADD COLUMN IF NOT EXISTS class_name TEXT;
-    """)
     conn.commit()
     cur.close()
     conn.close()
+
+    # Schema-repair pass: the table may already exist from an earlier version
+    # of this app (with a required birth_date column, no national_id, etc.).
+    # Each fix runs in its own connection so one failure never blocks the rest.
+    _fixups = [
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS national_id TEXT;",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS class_name TEXT;",
+        "ALTER TABLE registrations ALTER COLUMN birth_date DROP NOT NULL;",
+        "ALTER TABLE registrations ALTER COLUMN last_name DROP NOT NULL;",
+        "ALTER TABLE registrations ALTER COLUMN first_name DROP NOT NULL;",
+        """DO $$
+           BEGIN
+             IF NOT EXISTS (
+               SELECT 1 FROM pg_constraint WHERE conname = 'registrations_national_id_key'
+             ) THEN
+               ALTER TABLE registrations ADD CONSTRAINT registrations_national_id_key UNIQUE (national_id);
+             END IF;
+           END $$;""",
+    ]
+    for stmt in _fixups:
+        try:
+            fconn = get_conn()
+            fcur = fconn.cursor()
+            fcur.execute(stmt)
+            fconn.commit()
+            fcur.close()
+            fconn.close()
+        except Exception:
+            pass  # column/constraint likely doesn't exist or already matches — safe to skip
 
 
 def _dictify(cur):
