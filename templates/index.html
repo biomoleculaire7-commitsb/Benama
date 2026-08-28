@@ -1347,24 +1347,59 @@ async function loadRegistrationsSummary(){
 }
 
 // ---- Supervisor: registration tracking ----
+let _registrationsCache = [];
+
 async function loadRegistrations(){
   const res = await fetch('/api/registrations');
   const list = await res.json();
+  _registrationsCache = list;
   const container = document.getElementById('registrationsList');
   if(list.length===0){
     container.innerHTML = '<div class="empty">لا استمارات تسجيل بعد.</div>';
     return;
   }
   container.innerHTML = `<div class="roster-badge" style="margin-bottom:10px">📝 العدد: ${list.length}</div>
-    <table><tr><th>مسجَّل؟</th><th>اللقب والاسم</th><th>القسم</th><th>هاتف الولي</th><th>تاريخ التسجيل</th></tr>
+    <table><tr><th>مسجَّل؟</th><th>اللقب والاسم</th><th>القسم</th><th>هاتف الولي</th><th>تاريخ التسجيل</th><th></th></tr>
     ${list.map(r=>`<tr>
       <td><input type="checkbox" ${r.file_complete?'checked':''} onchange="toggleRegistrationComplete(${r.id}, this.checked)"></td>
       <td>${r.last_name} ${r.first_name}</td>
       <td>${r.class_name}</td>
       <td>${r.parent_phone}</td>
       <td>${r.date}</td>
+      <td><button class="small-btn ghost" onclick="printRegistrationRow(${r.id})">🖨️ طباعة</button></td>
     </tr>`).join('')}
     </table>`;
+}
+
+function printRegistrationRow(regId){
+  const r = _registrationsCache.find(x => x.id === regId);
+  if(!r){ showToast('⚠️ تعذّر إيجاد بيانات هذا التسجيل'); return; }
+  const html = `
+    <h2 style="text-align:center;margin-bottom:6px">متوسطة الشهيد بن نعمة مصطفى</h2>
+    <p style="text-align:center;color:#9C5F10;font-weight:700;margin-bottom:20px">استمارة تسجيل — الموسم الدراسي 2026/2027</p>
+    <table style="width:100%;border-collapse:collapse">
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">اللقب</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.last_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">الاسم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.first_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">القسم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.class_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">اسم الأب</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.father_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">لقب واسم الأم</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.mother_last_name} ${r.mother_first_name}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">عنوان السكن</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.address}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">هاتف الولي</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.parent_phone}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">واتساب الولي</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.parent_whatsapp}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">تاريخ تقديم الاستمارة</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.date}</td></tr>
+      <tr><th style="text-align:right;background:#EFE8D8;padding:8px">حالة الملف</th><td style="padding:8px;border-bottom:1px solid #D8CFB8">${r.file_complete ? '✔ مسجَّل نهائياً' : '⏳ بانتظار إيداع الملف'}</td></tr>
+    </table>
+  `;
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+    <title>استمارة تسجيل</title>
+    <style>body{font-family:'Tajawal','Segoe UI',sans-serif;padding:30px;color:#1E1B16;}</style>
+    </head><body>${html}</body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 300);
 }
 
 async function toggleRegistrationComplete(regId, complete){
