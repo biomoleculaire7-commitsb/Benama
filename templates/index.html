@@ -143,6 +143,18 @@ td{padding:9px 10px;border-bottom:1px solid var(--line);}
       <div class="field"><label>عنوان السكن *</label><input type="text" class="inline-input" id="regAddress"></div>
       <div class="field"><label>رقم هاتف الولي *</label><input type="text" class="inline-input" id="regParentPhone" inputmode="numeric" placeholder="0XXXXXXXXX"></div>
       <div class="field"><label>رقم واتساب الولي *</label><input type="text" class="inline-input" id="regParentWhatsapp" inputmode="numeric" placeholder="0XXXXXXXXX"></div>
+      <div class="field">
+        <label>هل يعاني التلميذ(ة) من مرض مزمن؟ *</label>
+        <select id="regHasIllness" class="inline-input" onchange="document.getElementById('regIllnessTypeField').style.display = this.value==='نعم' ? 'block':'none'">
+          <option value="">اختر...</option>
+          <option value="لا">لا</option>
+          <option value="نعم">نعم</option>
+        </select>
+      </div>
+      <div class="field" id="regIllnessTypeField" style="display:none">
+        <label>نوع المرض *</label>
+        <input type="text" class="inline-input" id="regIllnessType" placeholder="مثال: الربو، السكري...">
+      </div>
 
       <div id="regError" class="login-error"></div>
       <button class="btn" onclick="submitRegistration()">✔ تأكيد التسجيل</button>
@@ -502,9 +514,11 @@ function hideRegisterForm(){
   document.getElementById('registerReceiptScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'block';
   ['regFatherName','regMotherLastName','regMotherFirstName','regAddress',
-   'regParentPhone','regParentWhatsapp'].forEach(id=>{
+   'regParentPhone','regParentWhatsapp','regIllnessType'].forEach(id=>{
     document.getElementById(id).value = '';
   });
+  document.getElementById('regHasIllness').value = '';
+  document.getElementById('regIllnessTypeField').style.display = 'none';
   clearPickedStudent('regStudentPicked','registration');
   document.getElementById('regError').innerText = '';
 }
@@ -514,6 +528,9 @@ async function submitRegistration(){
   const stu = _pickedStudents['registration'];
   if(!stu){ errDiv.innerText = '⚠️ يرجى البحث عن التلميذ(ة) واختياره من نتائج البحث أولاً.'; return; }
 
+  const hasIllness = document.getElementById('regHasIllness').value;
+  const illnessType = document.getElementById('regIllnessType').value.trim();
+
   const fields = {
     national_id: stu.national_id,
     father_name: document.getElementById('regFatherName').value.trim(),
@@ -522,9 +539,14 @@ async function submitRegistration(){
     address: document.getElementById('regAddress').value.trim(),
     parent_phone: document.getElementById('regParentPhone').value.trim(),
     parent_whatsapp: document.getElementById('regParentWhatsapp').value.trim(),
+    has_chronic_illness: hasIllness,
+    illness_type: illnessType,
   };
-  const missing = Object.values(fields).some(v => !v);
+  const requiredCore = {...fields};
+  delete requiredCore.illness_type; // only required conditionally, checked below
+  const missing = Object.values(requiredCore).some(v => !v);
   if(missing){ errDiv.innerText = '⚠️ يرجى تعبئة جميع الخانات المطلوبة قبل التأكيد.'; return; }
+  if(hasIllness === 'نعم' && !illnessType){ errDiv.innerText = '⚠️ يرجى تحديد نوع المرض المزمن.'; return; }
   errDiv.innerText = '';
 
   const res = await fetch('/api/registrations', {
@@ -536,6 +558,29 @@ async function submitRegistration(){
   renderReceipt(data.receipt);
   document.getElementById('registerScreen').style.display = 'none';
   document.getElementById('registerReceiptScreen').style.display = 'block';
+}
+
+function officialLetterhead(){
+  return `
+    <div style="text-align:center;font-weight:700;margin-bottom:4px">الجمهورية الجزائرية الديمقراطية الشعبية</div>
+    <div style="text-align:center;font-weight:700;margin-bottom:14px">وزارة التربية الوطنية</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:18px">
+      <div style="text-align:left">متوسطة الشهيد بن نعمة مصطفى</div>
+      <div style="text-align:right">مديرية التربية</div>
+    </div>
+    <hr style="border:none;border-top:2px solid #0F4C3A;margin-bottom:18px">
+  `;
+}
+
+function officialSignature(){
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-top:50px">
+      <div style="text-align:center">
+        <div style="margin-bottom:40px">إمضاء المدير</div>
+        <div style="border-top:1px solid #1E1B16;width:160px"></div>
+      </div>
+    </div>
+  `;
 }
 
 function renderReceipt(r){
@@ -551,6 +596,7 @@ function renderReceipt(r){
     </ol>`;
 
   const receiptHTML = `
+    ${officialLetterhead()}
     <h2 style="text-align:center;margin-bottom:6px">متوسطة الشهيد بن نعمة مصطفى</h2>
     <p style="text-align:center;color:#9C5F10;font-weight:700;margin-bottom:6px">وصل تسجيل أولي — الموسم الدراسي 2026/2027</p>
     <p style="text-align:center;background:#EFE8D8;border-radius:6px;padding:10px;font-size:13.5px;margin-bottom:20px">
@@ -564,6 +610,7 @@ function renderReceipt(r){
     </table>
     ${docsList}
     <p style="margin-top:20px;color:#6f6a5c;font-size:13px">يرجى إحضار هذه الوثيقة مع الملف الكامل إلى إدارة المؤسسة (مصلحة الناظر) خلال فترة التسجيل المذكورة أعلاه لإتمام التسجيل النهائي.</p>
+    ${officialSignature()}
   `;
 
   document.getElementById('receiptCard').innerHTML = receiptHTML;
