@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template
 import db as db
+import storage as storage
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Search several likely locations for the data file, since manual GitHub
@@ -301,10 +302,17 @@ def post_doc(class_name):
     file_name = None
     file_obj = request.files.get("file")
     if file_obj and file_obj.filename:
-        safe_name = f"{int(time.time()*1000)}_{file_obj.filename}"
-        file_obj.save(os.path.join(UPLOAD_DIR, safe_name))
+        file_bytes = file_obj.read()
         file_name = file_obj.filename
-        file_url = f"/uploads/{safe_name}"
+        permanent_url = storage.upload_file(file_bytes, file_name, file_obj.mimetype)
+        if permanent_url:
+            file_url = permanent_url
+        else:
+            # fallback only — won't survive a Render restart on the free tier
+            safe_name = f"{int(time.time()*1000)}_{file_name}"
+            with open(os.path.join(UPLOAD_DIR, safe_name), "wb") as f:
+                f.write(file_bytes)
+            file_url = f"/uploads/{safe_name}"
 
     if db.DB_ENABLED:
         db.add_document(class_name, title, body, doctype, teacher_name, subject, file_url, file_name)
@@ -354,7 +362,7 @@ REGISTRATIONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "registrations.jso
 REGISTRATION_REQUIRED_FIELDS = [
     "national_id", "father_name",
     "mother_last_name", "mother_first_name", "address",
-    "parent_phone", "parent_whatsapp",
+    "parent_phone", "parent_whatsapp", "has_chronic_illness",
 ]
 
 LEVEL_LABELS = {
@@ -378,6 +386,15 @@ def create_registration():
     if missing:
         return jsonify({"ok": False, "error": "يرجى تعبئة جميع الخانات المطلوبة، واختيار التلميذ(ة) من نتائج البحث."}), 400
 
+    if cleaned["has_chronic_illness"] not in ("نعم", "لا"):
+        return jsonify({"ok": False, "error": "يرجى تحديد إن كان التلميذ(ة) يعاني من مرض مزمن (نعم/لا)."}), 400
+
+    illness_type = (data.get("illness_type") or "").strip()
+    if cleaned["has_chronic_illness"] == "نعم" and not illness_type:
+        return jsonify({"ok": False, "error": "يرجى تحديد نوع المرض المزمن."}), 400
+    if cleaned["has_chronic_illness"] == "لا":
+        illness_type = ""
+
     nid = cleaned["national_id"]
     stu = next((s for s in STUDENTS if str(s["national_id"]) == nid), None)
     if not stu:
@@ -399,6 +416,8 @@ def create_registration():
         "address": cleaned["address"],
         "parent_phone": cleaned["parent_phone"],
         "parent_whatsapp": cleaned["parent_whatsapp"],
+        "has_chronic_illness": cleaned["has_chronic_illness"],
+        "illness_type": illness_type,
     }
 
     if db.DB_ENABLED:
@@ -553,10 +572,16 @@ def create_announcement():
     file_name = None
     file_obj = request.files.get("file")
     if file_obj and file_obj.filename:
-        safe_name = f"{int(time.time()*1000)}_{file_obj.filename}"
-        file_obj.save(os.path.join(UPLOAD_DIR, safe_name))
+        file_bytes = file_obj.read()
         file_name = file_obj.filename
-        file_url = f"/uploads/{safe_name}"
+        permanent_url = storage.upload_file(file_bytes, file_name, file_obj.mimetype)
+        if permanent_url:
+            file_url = permanent_url
+        else:
+            safe_name = f"{int(time.time()*1000)}_{file_name}"
+            with open(os.path.join(UPLOAD_DIR, safe_name), "wb") as f:
+                f.write(file_bytes)
+            file_url = f"/uploads/{safe_name}"
 
     if db.DB_ENABLED:
         db.add_announcement(title, body, target, author, file_url, file_name)
