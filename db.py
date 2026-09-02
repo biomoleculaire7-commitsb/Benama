@@ -194,6 +194,8 @@ def init_db():
     _fixups = [
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS national_id TEXT;",
         "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS class_name TEXT;",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS has_chronic_illness TEXT;",
+        "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS illness_type TEXT;",
         "ALTER TABLE registrations ALTER COLUMN birth_date DROP NOT NULL;",
         "ALTER TABLE registrations ALTER COLUMN last_name DROP NOT NULL;",
         "ALTER TABLE registrations ALTER COLUMN first_name DROP NOT NULL;",
@@ -401,11 +403,13 @@ def add_registration(data):
         cur.close(); conn.close()
         raise ValueError("duplicate")
     cur.execute("""INSERT INTO registrations (national_id, last_name, first_name, class_name, father_name,
-                    mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp, level)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+                    mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp, level,
+                    has_chronic_illness, illness_type)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
                 (data["national_id"], data["last_name"], data["first_name"], data["class_name"], data["father_name"],
                  data["mother_last_name"], data["mother_first_name"], data["address"],
-                 data["parent_phone"], data["parent_whatsapp"], data["level"]))
+                 data["parent_phone"], data["parent_whatsapp"], data["level"],
+                 data.get("has_chronic_illness", ""), data.get("illness_type", "")))
     new_id = cur.fetchone()[0]
     conn.commit(); cur.close(); conn.close()
     return new_id
@@ -415,7 +419,8 @@ def get_registrations():
     conn = get_conn(); cur = conn.cursor()
     cur.execute("""SELECT id, national_id, last_name, first_name, class_name, father_name,
                     mother_last_name, mother_first_name, address, parent_phone, parent_whatsapp,
-                    level, file_complete, to_char(created_at,'YYYY-MM-DD HH24:MI') AS date
+                    level, has_chronic_illness, illness_type, file_complete,
+                    to_char(created_at,'YYYY-MM-DD HH24:MI') AS date
                     FROM registrations ORDER BY created_at DESC""")
     rows = _dictify(cur)
     cur.close(); conn.close()
