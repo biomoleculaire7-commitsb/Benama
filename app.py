@@ -23,17 +23,44 @@ if DATA_FILE is None:
         + ", ".join(_CANDIDATE_PATHS)
     )
 
-DOCS_FILE = os.path.join(os.path.dirname(DATA_FILE), "documents.json")
-ANN_FILE = os.path.join(os.path.dirname(DATA_FILE), "announcements.json")
-ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "absences.json")
-STAFF_ABS_FILE = os.path.join(os.path.dirname(DATA_FILE), "staff_absences.json")
-PARENT_PHONES_FILE = os.path.join(os.path.dirname(DATA_FILE), "parent_phones.json")
-GUID_FILE = os.path.join(os.path.dirname(DATA_FILE), "guidance.json")
-LOGIN_LOG_FILE = os.path.join(os.path.dirname(DATA_FILE), "login_log.json")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB - real server, no artifact-storage limit
+# --- Vercel: قرص المشروع للقراءة فقط، والمجلد الوحيد القابل للكتابة هو /tmp ---
+def _pick_writable_dir():
+    for candidate in (
+        os.path.join(BASE_DIR, "data"),   # محلي / Render / VPS
+        os.path.join(BASE_DIR, "tmp_data"),
+        "/tmp/benama_data",               # Vercel
+    ):
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            probe = os.path.join(candidate, ".w")
+            with open(probe, "w", encoding="utf-8") as fh:
+                fh.write("1")
+            os.remove(probe)
+            return candidate
+        except Exception:
+            continue
+    return "/tmp/benama_data"
 
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+WRITABLE_DIR = _pick_writable_dir()
+os.makedirs(WRITABLE_DIR, exist_ok=True)
+
+DOCS_FILE = os.path.join(WRITABLE_DIR, "documents.json")
+ANN_FILE = os.path.join(WRITABLE_DIR, "announcements.json")
+ABS_FILE = os.path.join(WRITABLE_DIR, "absences.json")
+STAFF_ABS_FILE = os.path.join(WRITABLE_DIR, "staff_absences.json")
+PARENT_PHONES_FILE = os.path.join(WRITABLE_DIR, "parent_phones.json")
+GUID_FILE = os.path.join(WRITABLE_DIR, "guidance.json")
+LOGIN_LOG_FILE = os.path.join(WRITABLE_DIR, "login_log.json")
+UPLOAD_DIR = os.path.join(WRITABLE_DIR, "uploads")
+MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB
+
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except Exception as e:
+    print(f"[WARNING] cannot create uploads dir ({e}); falling back to /tmp")
+    UPLOAD_DIR = "/tmp/benama_data/uploads"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Same resilience as the data file: find templates/ wherever it actually landed.
 _TEMPLATE_CANDIDATES = [
@@ -353,8 +380,8 @@ def search_students():
 
 # ---------------- Summons (استدعاء تلميذ) ----------------
 
-SUMMONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "summons.json")
-REGISTRATIONS_FILE = os.path.join(os.path.dirname(DATA_FILE), "registrations.json")
+SUMMONS_FILE = os.path.join(WRITABLE_DIR, "summons.json")
+REGISTRATIONS_FILE = os.path.join(WRITABLE_DIR, "registrations.json")
 
 
 # ---------------- Registrations (استمارة التسجيل 2026/2027) ----------------
